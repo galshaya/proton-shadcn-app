@@ -1,16 +1,13 @@
-import Link from "next/link"
 import { MainNav } from "./main-nav"
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center">
-        <div className="mr-4 flex">
-          <Link href="/" className="mr-6 flex items-center space-x-2">
-            <span className="font-bold">PROTON</span>
-          </Link>
+    <header className="w-full border-b bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center">
+          <div className="font-bold text-xl mr-8">PROTON</div>
+          <MainNav />
         </div>
-        <MainNav />
       </div>
     </header>
   )

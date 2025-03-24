@@ -1,22 +1,27 @@
-import { Inter } from "next/font/google";
+import { Poppins } from "next/font/google";
 import "./globals.css";
-import { MainNav } from "@/components/ui/nav";
+import { cn } from "@/lib/utils";
+import { SiteHeader } from "@/components/layout/site-header";
 
-const inter = Inter({ subsets: ["latin"] });
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+  variable: "--font-poppins",
+});
 
 export const metadata = {
-  title: "Proton CRM",
+  title: "Proton - Content Curation System",
   description: "AI-powered content curation and delivery system",
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body className={`${inter.className} min-h-screen bg-gray-50`}>
-        <MainNav />
-        <main className="min-h-[calc(100vh-4rem)]">
+    <html lang="en" suppressHydrationWarning>
+      <body className={cn("min-h-screen bg-gray-50", poppins.className)}>
+        <SiteHeader />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {children}
-        </main>
+        </div>
       </body>
     </html>
   );
