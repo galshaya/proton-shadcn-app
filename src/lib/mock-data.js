@@ -2,166 +2,271 @@
 
 export const mockProjects = [
   {
-    id: "1",
+    id: "proj_1",
     name: "Marketing Campaign 2025",
     description: "Q1 marketing campaign for client engagement",
     status: "Active",
-    createdAt: "2024-02-20T10:00:00Z",
-    updatedAt: "2024-02-20T10:00:00Z",
-    documentCount: 5,
-    recipientCount: 12,
-    nextNewsletterDate: "2024-03-01T09:00:00Z"
+    createdAt: "2025-01-10T10:00:00Z",
+    lastUpdated: "2025-01-15T10:00:00Z",
+    documents: 5,
+    recipients: 156,
+    nextNewsletter: "2025-01-20T09:00:00Z"
   },
   {
-    id: "2",
+    id: "proj_2",
     name: "Product Launch Q2",
-    description: "Product launch campaign for Q2 2024",
+    description: "Product launch campaign for Q2 2025",
     status: "Active",
-    createdAt: "2024-02-19T15:30:00Z",
-    updatedAt: "2024-02-19T15:30:00Z",
-    documentCount: 3,
-    recipientCount: 8,
-    nextNewsletterDate: "2024-03-15T10:00:00Z"
+    createdAt: "2025-01-08T15:30:00Z",
+    lastUpdated: "2025-01-14T15:30:00Z",
+    documents: 3,
+    recipients: 87,
+    nextNewsletter: "2025-01-19T10:00:00Z"
   },
   {
-    id: "3",
-    name: "Customer Feedback 2024",
+    id: "proj_3",
+    name: "Customer Feedback 2025",
     description: "Customer feedback and satisfaction survey",
     status: "Archived",
-    createdAt: "2024-02-18T09:15:00Z",
-    updatedAt: "2024-02-18T09:15:00Z",
-    documentCount: 2,
-    recipientCount: 15,
-    nextNewsletterDate: null
+    createdAt: "2025-01-05T09:15:00Z",
+    lastUpdated: "2025-01-12T09:15:00Z",
+    documents: 2,
+    recipients: 203,
+    nextNewsletter: "2025-01-25T14:00:00Z"
   }
 ];
 
 export const mockDocuments = [
   {
-    id: "1",
+    id: "doc_1",
     name: "Q1 Marketing Strategy.pdf",
-    type: "PDF",
+    type: "application/pdf",
+    size: "2.4 MB",
     url: "https://example.com/documents/strategy.pdf",
-    projectId: "1",
-    createdAt: "2024-02-20T10:00:00Z",
-    updatedAt: "2024-02-20T10:00:00Z"
+    projectId: "proj_1",
+    uploadedAt: "2025-01-15T10:00:00Z",
+    updatedAt: "2025-01-15T10:00:00Z"
   },
   {
-    id: "2",
+    id: "doc_2",
     name: "Product Roadmap.xlsx",
-    type: "Excel",
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    size: "1.8 MB",
     url: "https://example.com/documents/roadmap.xlsx",
-    projectId: "2",
-    createdAt: "2024-02-19T15:30:00Z",
-    updatedAt: "2024-02-19T15:30:00Z"
+    projectId: "proj_2",
+    uploadedAt: "2025-01-14T15:30:00Z",
+    updatedAt: "2025-01-14T15:30:00Z"
+  },
+  {
+    id: "doc_3",
+    name: "Market Research Results.docx",
+    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    size: "3.2 MB",
+    url: "https://example.com/documents/research.docx",
+    projectId: "proj_1",
+    uploadedAt: "2025-01-13T09:15:00Z",
+    updatedAt: "2025-01-13T09:15:00Z"
+  },
+  {
+    id: "doc_4",
+    name: "Competitive Analysis.pdf",
+    type: "application/pdf",
+    size: "4.5 MB",
+    url: "https://example.com/documents/analysis.pdf",
+    projectId: "proj_1",
+    uploadedAt: "2025-01-12T14:20:00Z",
+    updatedAt: "2025-01-12T14:20:00Z"
+  },
+  {
+    id: "doc_5",
+    name: "Content Calendar.xlsx",
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    size: "1.2 MB",
+    url: "https://example.com/documents/calendar.xlsx",
+    projectId: "proj_1",
+    uploadedAt: "2025-01-10T11:45:00Z",
+    updatedAt: "2025-01-10T11:45:00Z"
   }
 ];
 
 export const mockRecipients = [
   {
-    id: "1",
+    id: "rec_1",
     name: "John Doe",
     email: "john@example.com",
     persona: "Executive",
-    status: "Active",
-    projectId: "1",
-    createdAt: "2024-02-20T10:00:00Z",
-    updatedAt: "2024-02-20T10:00:00Z"
+    status: "active",
+    projectId: "proj_1",
+    createdAt: "2025-01-10T10:00:00Z",
+    updatedAt: "2025-01-10T10:00:00Z"
   },
   {
-    id: "2",
+    id: "rec_2",
     name: "Jane Smith",
     email: "jane@example.com",
     persona: "Manager",
-    status: "Active",
-    projectId: "1",
-    createdAt: "2024-02-20T10:00:00Z",
-    updatedAt: "2024-02-20T10:00:00Z"
+    status: "active",
+    projectId: "proj_1",
+    createdAt: "2025-01-10T10:05:00Z",
+    updatedAt: "2025-01-10T10:05:00Z"
+  },
+  {
+    id: "rec_3",
+    name: "Robert Johnson",
+    email: "robert@example.com",
+    persona: "Executive",
+    status: "active",
+    projectId: "proj_1",
+    createdAt: "2025-01-11T09:30:00Z",
+    updatedAt: "2025-01-11T09:30:00Z"
+  },
+  {
+    id: "rec_4",
+    name: "Emily Davis",
+    email: "emily@example.com",
+    persona: "Manager",
+    status: "inactive",
+    projectId: "proj_1",
+    createdAt: "2025-01-11T09:45:00Z",
+    updatedAt: "2025-01-11T09:45:00Z"
+  }
+];
+
+export const mockPersonas = [
+  {
+    id: "pers_1",
+    name: "Executive",
+    description: "Senior executives and decision makers",
+    status: "active",
+    createdAt: "2025-01-05T10:00:00Z",
+    updatedAt: "2025-01-05T10:00:00Z"
+  },
+  {
+    id: "pers_2",
+    name: "Manager",
+    description: "Middle management and team leaders",
+    status: "active",
+    createdAt: "2025-01-06T11:30:00Z",
+    updatedAt: "2025-01-06T11:30:00Z"
+  },
+  {
+    id: "pers_3",
+    name: "Technical",
+    description: "Technical staff and developers",
+    status: "inactive",
+    createdAt: "2025-01-07T14:20:00Z",
+    updatedAt: "2025-01-07T14:20:00Z"
   }
 ];
 
 export const mockScrapingPackages = [
   {
-    id: "1",
+    id: "pkg_1",
     name: "Tech News Scraper",
     description: "Scrapes top tech news sites weekly",
-    status: "Active",
+    status: "active",
     schedule: "0 0 * * 1", // Every Monday at midnight
-    lastRun: "2024-02-19T00:00:00Z",
-    nextRun: "2024-02-26T00:00:00Z",
-    projectId: "1",
-    createdAt: "2024-02-20T10:00:00Z",
-    updatedAt: "2024-02-20T10:00:00Z"
+    lastRun: "2025-01-15T00:00:00Z",
+    nextRun: "2025-01-22T00:00:00Z",
+    projectId: "proj_1",
+    createdAt: "2025-01-08T10:00:00Z",
+    updatedAt: "2025-01-15T00:05:00Z"
   },
   {
-    id: "2",
+    id: "pkg_2",
     name: "Industry Reports",
     description: "Daily industry report collection",
-    status: "Active",
+    status: "active",
     schedule: "0 9 * * *", // Every day at 9 AM
-    lastRun: "2024-02-20T09:00:00Z",
-    nextRun: "2024-02-21T09:00:00Z",
-    projectId: "2",
-    createdAt: "2024-02-19T15:30:00Z",
-    updatedAt: "2024-02-19T15:30:00Z"
+    lastRun: "2025-01-15T09:00:00Z",
+    nextRun: "2025-01-16T09:00:00Z",
+    projectId: "proj_2",
+    createdAt: "2025-01-08T15:30:00Z",
+    updatedAt: "2025-01-15T09:05:00Z"
   }
 ];
 
 export const mockNewsletters = [
   {
-    id: "1",
-    subject: "Weekly Tech Update",
+    id: "news_1",
+    subject: "Weekly Tech Update: January 20, 2025",
     content: "<h1>Weekly Tech Update</h1><p>Here's your weekly tech news summary...</p>",
     status: "Scheduled",
-    scheduledFor: "2024-03-01T09:00:00Z",
+    scheduledFor: "2025-01-20T09:00:00Z",
     sentAt: null,
-    projectId: "1",
-    createdAt: "2024-02-20T10:00:00Z",
-    updatedAt: "2024-02-20T10:00:00Z"
+    projectId: "proj_1",
+    recipients: 156,
+    stats: {
+      openRate: 0,
+      clickRate: 0
+    },
+    createdAt: "2025-01-15T10:00:00Z",
+    updatedAt: "2025-01-15T10:00:00Z"
   },
   {
-    id: "2",
-    subject: "Product Launch Preview",
+    id: "news_2",
+    subject: "Product Launch Preview: January 5, 2025",
     content: "<h1>Product Launch Preview</h1><p>Get ready for our upcoming product launch...</p>",
     status: "Sent",
-    scheduledFor: "2024-02-15T10:00:00Z",
-    sentAt: "2024-02-15T10:00:00Z",
-    projectId: "2",
-    createdAt: "2024-02-19T15:30:00Z",
-    updatedAt: "2024-02-19T15:30:00Z"
+    scheduledFor: "2025-01-05T10:00:00Z",
+    sentAt: "2025-01-05T10:00:00Z",
+    projectId: "proj_1",
+    recipients: 156,
+    stats: {
+      openRate: 72.4,
+      clickRate: 45.6
+    },
+    createdAt: "2025-01-03T15:30:00Z",
+    updatedAt: "2025-01-05T10:05:00Z"
+  },
+  {
+    id: "news_3",
+    subject: "Market Insights: January 12, 2025",
+    content: "<h1>Market Insights</h1><p>Latest market trends and analysis...</p>",
+    status: "Sent",
+    scheduledFor: "2025-01-12T10:00:00Z",
+    sentAt: "2025-01-12T10:00:00Z",
+    projectId: "proj_1",
+    recipients: 156,
+    stats: {
+      openRate: 68.2,
+      clickRate: 37.9
+    },
+    createdAt: "2025-01-10T14:30:00Z",
+    updatedAt: "2025-01-12T10:05:00Z"
   }
 ];
 
 export const mockActivity = [
   {
-    id: "1",
+    id: "act_1",
     type: "DocumentUpload",
     typeIcon: "📄",
     projectName: "Marketing Campaign 2025",
-    timestamp: "2024-02-20T10:00:00Z",
+    timestamp: "2025-01-15T10:00:00Z",
     details: "New document uploaded: Q1 Marketing Strategy.pdf"
   },
   {
-    id: "2",
+    id: "act_2",
     type: "NewsletterSent",
     typeIcon: "📧",
-    projectName: "Product Launch Q2",
-    timestamp: "2024-02-15T10:00:00Z",
-    details: "Newsletter sent to 8 recipients"
+    projectName: "Marketing Campaign 2025",
+    timestamp: "2025-01-12T10:00:00Z",
+    details: "Newsletter sent to 156 recipients"
   },
   {
-    id: "3",
+    id: "act_3",
     type: "PersonaModified",
     typeIcon: "👤",
     projectName: "Marketing Campaign 2025",
-    timestamp: "2024-02-14T15:30:00Z",
+    timestamp: "2025-01-11T15:30:00Z",
     details: "Updated persona settings for Executive group"
   }
 ];
 
 export const mockMetrics = {
   totalProjects: 3,
-  totalRecipients: 35,
+  totalRecipients: 446,
   totalDocuments: 10,
   totalPackages: 5,
   newslettersSent: 12,
@@ -174,34 +279,34 @@ const scrapingPackages = [
     id: 1,
     name: "Tech News Scraper",
     description: "Scrapes top tech news sites weekly",
-    status: "Active",
+    status: "active",
     schedule: "Weekly",
-    lastRun: "2024-03-20T10:00:00Z",
-    nextRun: "2024-03-27T10:00:00Z",
-    createdAt: "2024-03-01T00:00:00Z",
-    updatedAt: "2024-03-20T10:00:00Z",
+    lastRun: "2025-01-15T10:00:00Z",
+    nextRun: "2025-01-22T10:00:00Z",
+    createdAt: "2025-01-01T00:00:00Z",
+    updatedAt: "2025-01-15T10:00:00Z",
   },
   {
     id: 2,
     name: "Industry Reports",
     description: "Daily industry report collection",
-    status: "Active",
+    status: "active",
     schedule: "Daily",
-    lastRun: "2024-03-21T09:00:00Z",
-    nextRun: "2024-03-22T09:00:00Z",
-    createdAt: "2024-03-01T00:00:00Z",
-    updatedAt: "2024-03-21T09:00:00Z",
+    lastRun: "2025-01-15T09:00:00Z",
+    nextRun: "2025-01-16T09:00:00Z",
+    createdAt: "2025-01-01T00:00:00Z",
+    updatedAt: "2025-01-15T09:00:00Z",
   },
   {
     id: 3,
     name: "Market Analysis",
     description: "Monthly market analysis collection",
-    status: "Inactive",
+    status: "inactive",
     schedule: "Monthly",
-    lastRun: "2024-02-15T08:00:00Z",
-    nextRun: "2024-03-15T08:00:00Z",
-    createdAt: "2024-03-01T00:00:00Z",
-    updatedAt: "2024-03-01T00:00:00Z",
+    lastRun: "2025-01-01T08:00:00Z",
+    nextRun: "2025-02-01T08:00:00Z",
+    createdAt: "2025-01-01T00:00:00Z",
+    updatedAt: "2025-01-01T00:00:00Z",
   },
 ];
 
@@ -215,21 +320,34 @@ export const mockApi = {
   deleteProject: (id) => Promise.resolve({ success: true }),
 
   // Documents
-  getProjectDocuments: (projectId) => Promise.resolve(mockDocuments.filter(d => d.projectId === projectId)),
+  getProjectDocuments: (projectId) => {
+    // Return all documents for project ID 1, otherwise filter
+    if (projectId === "proj_1") {
+      return Promise.resolve(mockDocuments.filter(d => d.projectId === projectId));
+    }
+    return Promise.resolve([]);
+  },
   uploadDocument: (projectId, file) => Promise.resolve({
-    id: "3",
+    id: Math.random().toString(36).substring(2, 9),
     name: file.name,
     type: file.type,
+    size: "1.5 MB",
     url: URL.createObjectURL(file),
     projectId,
-    createdAt: new Date().toISOString()
+    uploadedAt: new Date().toISOString()
   }),
-  deleteDocument: (projectId, documentId) => Promise.resolve({ success: true }),
+  deleteDocument: (id) => Promise.resolve({ success: true }),
 
   // Recipients
-  getProjectRecipients: (projectId) => Promise.resolve(mockRecipients.filter(r => r.projectId === projectId)),
+  getProjectRecipients: (projectId) => {
+    // Return all recipients for project ID 1, otherwise return an empty array
+    if (projectId === "proj_1") {
+      return Promise.resolve(mockRecipients);
+    }
+    return Promise.resolve([]);
+  },
   addRecipient: (projectId, data) => Promise.resolve({
-    id: "3",
+    id: Math.random().toString(36).substring(2, 9),
     ...data,
     projectId,
     createdAt: new Date().toISOString()
@@ -242,87 +360,85 @@ export const mockApi = {
   }),
   deleteRecipient: (projectId, recipientId) => Promise.resolve({ success: true }),
 
-  // Scraping Packages
-  getProjectPackages: (projectId) => Promise.resolve(mockScrapingPackages.filter(p => p.projectId === projectId)),
-  createPackage: (projectId, data) => Promise.resolve({
-    id: "3",
-    ...data,
-    projectId,
-    createdAt: new Date().toISOString()
-  }),
-  updatePackage: (projectId, packageId, data) => Promise.resolve({
-    id: packageId,
-    ...data,
-    projectId,
-    updatedAt: new Date().toISOString()
-  }),
-  deletePackage: (projectId, packageId) => Promise.resolve({ success: true }),
-
   // Newsletters
-  getProjectNewsletters: (projectId) => Promise.resolve(mockNewsletters.filter(n => n.projectId === projectId)),
+  getProjectNewsletters: (projectId) => {
+    // Return all newsletters for project ID 1, otherwise return an empty array
+    if (projectId === "proj_1") {
+      return Promise.resolve(mockNewsletters);
+    }
+    return Promise.resolve([]);
+  },
   createNewsletter: (projectId, data) => Promise.resolve({
-    id: "3",
+    id: Math.random().toString(36).substring(2, 9),
     ...data,
     projectId,
     createdAt: new Date().toISOString()
   }),
-  updateNewsletter: (projectId, newsletterId, data) => Promise.resolve({
-    id: newsletterId,
+  updateNewsletter: (id, data) => Promise.resolve({
+    id,
     ...data,
-    projectId,
     updatedAt: new Date().toISOString()
   }),
-  deleteNewsletter: (projectId, newsletterId) => Promise.resolve({ success: true }),
+  sendNewsletter: (id) => Promise.resolve({
+    id,
+    status: "Sent",
+    sentAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }),
+  
+  // Scraping Packages
+  getScrapingPackages: () => Promise.resolve(mockScrapingPackages),
+  getProjectPackages: (projectId) => Promise.resolve(mockScrapingPackages.filter(p => p.projectId === projectId)),
+  createPackage: (data) => Promise.resolve({
+    id: "pkg_" + Math.random().toString(36).substring(2, 9),
+    ...data,
+    createdAt: new Date().toISOString(),
+    lastRun: null,
+    nextRun: null
+  }),
+  updatePackage: (id, data) => Promise.resolve({
+    id,
+    ...data,
+    updatedAt: new Date().toISOString()
+  }),
+  deletePackage: (id) => Promise.resolve({ success: true }),
+  runPackage: (id) => Promise.resolve({
+    id,
+    lastRun: new Date().toISOString(),
+    nextRun: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date().toISOString()
+  }),
 
-  // Activity
-  getRecentActivity: () => Promise.resolve(mockActivity),
+  // Personas
+  getPersonas: () => Promise.resolve(mockPersonas),
+  createPersona: (data) => Promise.resolve({
+    id: "pers_" + Math.random().toString(36).substring(2, 9),
+    ...data,
+    createdAt: new Date().toISOString()
+  }),
+  updatePersona: (id, data) => Promise.resolve({
+    id,
+    ...data,
+    updatedAt: new Date().toISOString()
+  }),
+  deletePersona: (id) => Promise.resolve({ success: true }),
 
-  // Metrics
-  getMetrics: () => Promise.resolve(mockMetrics),
-
-  // Scraping Package functions
-  getScrapingPackages: async () => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return scrapingPackages;
-  },
-
-  getScrapingPackage: async (id) => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return scrapingPackages.find((pkg) => pkg.id === id);
-  },
-
-  createScrapingPackage: async (data) => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const newPackage = {
-      id: scrapingPackages.length + 1,
-      ...data,
-      lastRun: null,
-      nextRun: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    scrapingPackages.push(newPackage);
-    return newPackage;
-  },
-
-  updateScrapingPackage: async (id, data) => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const index = scrapingPackages.findIndex((pkg) => pkg.id === id);
-    if (index === -1) throw new Error("Package not found");
-
-    const updatedPackage = {
-      ...scrapingPackages[index],
-      ...data,
-      updatedAt: new Date().toISOString(),
-    };
-    scrapingPackages[index] = updatedPackage;
-    return updatedPackage;
-  },
-
-  deleteScrapingPackage: async (id) => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const index = scrapingPackages.findIndex((pkg) => pkg.id === id);
-    if (index === -1) throw new Error("Package not found");
-    scrapingPackages.splice(index, 1);
-  },
+  // Recipients for scraping packages (not tied to a project)
+  getRecipients: () => Promise.resolve(
+    mockRecipients.map(recipient => ({
+      ...recipient,
+      persona: recipient.persona === "Executive" ? "pers_1" : (recipient.persona === "Manager" ? "pers_2" : "pers_3")
+    }))
+  ),
+  createRecipient: (data) => Promise.resolve({
+    id: "rec_" + Math.random().toString(36).substring(2, 9),
+    ...data,
+    createdAt: new Date().toISOString()
+  }),
+  updateRecipient: (id, data) => Promise.resolve({
+    id,
+    ...data,
+    updatedAt: new Date().toISOString()
+  }),
+  deleteRecipient: (id) => Promise.resolve({ success: true }),
 }; 

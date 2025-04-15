@@ -10,14 +10,14 @@ const poppins = Poppins({
 });
 
 export const metadata = {
-  title: "Proton - Content Curation System",
-  description: "AI-powered content curation and delivery system",
+  title: "Proton - AI Signal Intelligence",
+  description: "AI-powered content curation and delivery system by Proto",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn("min-h-screen bg-gray-50", poppins.className)}>
+      <body className={cn("min-h-screen bg-black text-white", poppins.className)}>
         <SiteHeader />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {children}

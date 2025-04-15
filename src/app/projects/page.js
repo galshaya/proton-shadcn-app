@@ -11,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { StatusBadge } from "@/components/ui/status-badge"
 import { Modal } from "@/components/ui/modal"
 import { ProjectForm } from "@/components/forms/project-form"
 import {
@@ -28,9 +27,9 @@ import {
 export default function ProjectsPage() {
   const router = useRouter()
   const [projects, setProjects] = useState([
-    { id: 1, name: "Project Alpha", description: "AI-driven content analysis", status: "active", lastUpdated: "2024-03-15" },
-    { id: 2, name: "Project Beta", description: "Market research automation", status: "archived", lastUpdated: "2024-03-14" },
-    { id: 3, name: "Project Gamma", description: "Customer feedback analysis", status: "active", lastUpdated: "2024-03-13" },
+    { id: "proj_1", name: "AI-driven content analysis", description: "Automated content evaluation for market trends", status: "active", lastUpdated: "2024-03-15" },
+    { id: "proj_2", name: "Market research automation", description: "Competitor analysis in retail sector", status: "archived", lastUpdated: "2024-03-14" },
+    { id: "proj_3", name: "Customer feedback analysis", description: "Sentiment analysis of survey responses", status: "active", lastUpdated: "2024-03-13" },
   ])
   const [searchInput, setSearchInput] = useState("")
   const [rowsPerPage, setRowsPerPage] = useState(10)
@@ -55,7 +54,7 @@ export default function ProjectsPage() {
 
   const handleCreateProject = (projectData) => {
     const newProject = {
-      id: projects.length + 1,
+      id: "proj_" + Math.random().toString(36).substring(2, 9),
       ...projectData,
       lastUpdated: new Date().toISOString().split("T")[0]
     }
@@ -86,24 +85,29 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold">Projects</h1>
-        <Button onClick={() => setShowCreateModal(true)}>Create Project</Button>
+    <div>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-2xl font-light">Projects</h1>
+        <Button 
+          onClick={() => setShowCreateModal(true)}
+          className="bg-white text-black hover:bg-gray-200 font-light"
+        >
+          Create Project
+        </Button>
       </div>
 
-      <div className="flex justify-between items-center mb-4 gap-4">
+      <div className="flex justify-between items-center mb-6 gap-4">
         <Input
           placeholder="Search projects..."
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          className="max-w-sm"
+          className="max-w-sm bg-[#111] border-gray-800 text-white"
         />
         <Select value={rowsPerPage.toString()} onValueChange={(value) => setRowsPerPage(Number(value))}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-[140px] bg-[#111] border-gray-800 text-white font-light">
             <SelectValue placeholder="Rows per page" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-[#111] border-gray-800 text-white">
             <SelectItem value="10">10 rows</SelectItem>
             <SelectItem value="20">20 rows</SelectItem>
             <SelectItem value="50">50 rows</SelectItem>
@@ -111,20 +115,20 @@ export default function ProjectsPage() {
         </Select>
       </div>
 
-      <div className="bg-white rounded-lg border">
+      <div className="rounded border border-gray-800 bg-black overflow-hidden">
         <table className="w-full">
           <thead>
-            <tr className="border-b">
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">Name</th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">Description</th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">Status</th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">Last Updated</th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">Actions</th>
+            <tr className="border-b border-gray-800">
+              <th className="px-6 py-3 text-left text-sm font-light text-gray-400">Name</th>
+              <th className="px-6 py-3 text-left text-sm font-light text-gray-400">Description</th>
+              <th className="px-6 py-3 text-left text-sm font-light text-gray-400">Status</th>
+              <th className="px-6 py-3 text-left text-sm font-light text-gray-400">Last Updated</th>
+              <th className="px-6 py-3 text-left text-sm font-light text-gray-400">Actions</th>
             </tr>
           </thead>
           <tbody>
             {currentProjects.map((project) => (
-              <tr key={project.id} className="border-b hover:bg-gray-50 cursor-pointer">
+              <tr key={project.id} className="border-b border-gray-800 hover:bg-[#0a0a0a] cursor-pointer">
                 <td 
                   className="px-6 py-4 text-sm"
                   onClick={() => router.push(`/projects/${project.id}`)}
@@ -132,7 +136,7 @@ export default function ProjectsPage() {
                   {project.name}
                 </td>
                 <td 
-                  className="px-6 py-4 text-sm text-gray-600"
+                  className="px-6 py-4 text-sm text-gray-400"
                   onClick={() => router.push(`/projects/${project.id}`)}
                 >
                   {project.description}
@@ -141,14 +145,14 @@ export default function ProjectsPage() {
                   className="px-6 py-4"
                   onClick={() => router.push(`/projects/${project.id}`)}
                 >
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    project.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-light ${
+                    project.status === "active" ? "bg-green-900/30 text-green-400" : "bg-gray-800 text-gray-400"
                   }`}>
                     {project.status}
                   </span>
                 </td>
                 <td 
-                  className="px-6 py-4 text-sm text-gray-600"
+                  className="px-6 py-4 text-sm text-gray-400"
                   onClick={() => router.push(`/projects/${project.id}`)}
                 >
                   {project.lastUpdated}
@@ -158,6 +162,7 @@ export default function ProjectsPage() {
                     <Button
                       variant="outline"
                       size="sm"
+                      className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
                       onClick={(e) => {
                         e.stopPropagation()
                         setSelectedProject(project)
@@ -169,6 +174,7 @@ export default function ProjectsPage() {
                     <Button
                       variant="destructive"
                       size="sm"
+                      className="bg-red-900/30 text-red-400 hover:bg-red-900/50 font-light"
                       onClick={(e) => {
                         e.stopPropagation()
                         setSelectedProject(project)
@@ -186,14 +192,15 @@ export default function ProjectsPage() {
       </div>
 
       {totalPages > 1 && (
-        <div className="flex justify-between items-center mt-4">
-          <div className="text-sm text-gray-600">
+        <div className="flex justify-between items-center mt-6">
+          <div className="text-sm text-gray-400 font-light">
             Showing {startIndex + 1} to {Math.min(endIndex, totalProjects)} of {totalProjects} results
           </div>
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
+              className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
             >
@@ -202,6 +209,7 @@ export default function ProjectsPage() {
             <Button
               variant="outline"
               size="sm"
+              className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
             >
@@ -238,10 +246,10 @@ export default function ProjectsPage() {
       </Modal>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-[#111] border-gray-800 text-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-white">Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
               This action cannot be undone. This will permanently delete the project
               and all of its data.
             </AlertDialogDescription>
@@ -250,11 +258,15 @@ export default function ProjectsPage() {
             <AlertDialogCancel onClick={() => {
               setShowDeleteDialog(false)
               setSelectedProject(null)
-            }}>
+            }}
+            className="bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
+            >
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteProject}>
-              Delete Project
+            <AlertDialogAction onClick={handleDeleteProject}
+              className="bg-red-900/30 text-red-400 hover:bg-red-900/50 font-light"
+            >
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

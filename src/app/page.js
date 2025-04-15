@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { Card } from "@/components/ui/card"
 
 // Mock data for demonstration
@@ -46,83 +47,100 @@ const recentProjects = [
 
 export default function Home() {
   return (
-    <div className="space-y-8">
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-md border border-gray-200">
-          <div className="space-y-1">
-            <p className="text-sm text-gray-500">Total Projects</p>
-            <div className="text-2xl font-medium">12</div>
-            <p className="text-xs text-gray-500">Active projects in the system</p>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-md border border-gray-200">
-          <div className="space-y-1">
-            <p className="text-sm text-gray-500">Total Recipients</p>
-            <div className="text-2xl font-medium">1,234</div>
-            <p className="text-xs text-gray-500">Newsletter subscribers</p>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-md border border-gray-200">
-          <div className="space-y-1">
-            <p className="text-sm text-gray-500">Total Documents</p>
-            <div className="text-2xl font-medium">456</div>
-            <p className="text-xs text-gray-500">Uploaded documents</p>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-md border border-gray-200">
-          <div className="space-y-1">
-            <p className="text-sm text-gray-500">Total Packages</p>
-            <div className="text-2xl font-medium">8</div>
-            <p className="text-xs text-gray-500">Scraping packages</p>
-          </div>
-        </div>
+    <div>
+      <div className="mb-12">
+        <Image 
+          src="/proton.svg" 
+          alt="Proton" 
+          width={240} 
+          height={72} 
+          className="mb-6"
+          priority
+        />
+        <h1 className="text-3xl font-light tracking-tight mb-2">AI Signal Intelligence</h1>
+        <p className="text-gray-400">Distinguishing signal from noise for strategic decision making</p>
       </div>
-
-      {/* Recent Projects */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-medium">Recent Projects</h2>
-          <a href="/projects" className="text-sm text-blue-600 hover:underline">View All Projects</a>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white p-6 rounded-md border border-gray-200">
-            <h3 className="font-medium">Marketing Campaign 2025</h3>
-            <p className="text-sm text-gray-500 mb-4">Marketing Strategy Analysis</p>
-            
+      {/* // life is okay */}
+      <div className="space-y-10">
+        {/* Metrics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-[#111] p-6 rounded border border-gray-800 hover:border-gray-700 transition-colors">
             <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Last Updated:</span>
-                <span className="text-sm">2024-03-20</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Documents:</span>
-                <span className="text-sm">5</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Next Newsletter:</span>
-                <span className="text-sm">2024-03-25</span>
-              </div>
+              <p className="text-sm text-gray-400 font-light">Active Clients</p>
+              <div className="text-2xl font-light">8</div>
+              <p className="text-xs text-gray-500 font-light">Currently monitoring</p>
             </div>
           </div>
-          
-          <div className="bg-white p-6 rounded-md border border-gray-200">
-            <h3 className="font-medium">Product Launch</h3>
-            <p className="text-sm text-gray-500 mb-4">New Product Line Analysis</p>
-            
+          <div className="bg-[#111] p-6 rounded border border-gray-800 hover:border-gray-700 transition-colors">
             <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Last Updated:</span>
-                <span className="text-sm">2024-03-19</span>
+              <p className="text-sm text-gray-400 font-light">Weekly Insights</p>
+              <div className="text-2xl font-light">24</div>
+              <p className="text-xs text-gray-500 font-light">Generated this week</p>
+            </div>
+          </div>
+          <div className="bg-[#111] p-6 rounded border border-gray-800 hover:border-gray-700 transition-colors">
+            <div className="space-y-2">
+              <p className="text-sm text-gray-400 font-light">Content Sources</p>
+              <div className="text-2xl font-light">156</div>
+              <p className="text-xs text-gray-500 font-light">RSS feeds & APIs</p>
+            </div>
+          </div>
+          <div className="bg-[#111] p-6 rounded border border-gray-800 hover:border-gray-700 transition-colors">
+            <div className="space-y-2">
+              <p className="text-sm text-gray-400 font-light">AI Models</p>
+              <div className="text-2xl font-light">3</div>
+              <p className="text-xs text-gray-500 font-light">Active processing chains</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Projects */}
+        <div>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-light">Active Client Projects</h2>
+            <Link href="/projects" className="text-sm text-blue-400 hover:text-blue-300 font-light">
+              View All Projects
+            </Link>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-[#111] p-6 rounded border border-gray-800 hover:border-gray-700 transition-colors">
+              <h3 className="text-lg font-light mb-1">Advent Health</h3>
+              <p className="text-sm text-gray-400 mb-6 font-light">Healthcare Innovation Monitoring</p>
+              
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-400 font-light">Last Updated</span>
+                  <span className="text-sm font-light">2025-01-15</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-400 font-light">Sources</span>
+                  <span className="text-sm font-light">42</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-400 font-light">Next Report</span>
+                  <span className="text-sm font-light">2025-01-20</span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Documents:</span>
-                <span className="text-sm">3</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Next Newsletter:</span>
-                <span className="text-sm">2024-03-24</span>
+            </div>
+            
+            <div className="bg-[#111] p-6 rounded border border-gray-800 hover:border-gray-700 transition-colors">
+              <h3 className="text-lg font-light mb-1">Mars Pet Nutrition</h3>
+              <p className="text-sm text-gray-400 mb-6 font-light">Pet Care Industry Intelligence</p>
+              
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-400 font-light">Last Updated</span>
+                  <span className="text-sm font-light">2025-01-14</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-400 font-light">Sources</span>
+                  <span className="text-sm font-light">38</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-400 font-light">Next Report</span>
+                  <span className="text-sm font-light">2025-01-19</span>
+                </div>
               </div>
             </div>
           </div>

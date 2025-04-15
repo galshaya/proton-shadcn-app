@@ -3,156 +3,111 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState({
-    organizationName: "Proto",
-    timezone: "UTC",
-    aiModule: "gpt-4",
-    smtpHost: "smtp.example.com",
-    smtpPort: "587",
-    smtpUser: "user@example.com",
+  const [formData, setFormData] = useState({
+    apiKey: "sk-•••••••••••••••••••••••••••••••",
+    emailSender: "notifications@proto.ai",
+    signature: "The Proto AI Team",
+    enableWeeklyDigest: true,
+    enableErrorAlerts: true,
   })
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    // Handle settings update
-    console.log("Settings updated:", settings)
+    // Save settings
+    alert("Settings saved!")
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold text-foreground">Global Settings</h1>
+    <div>
+      <div className="mb-10">
+        <h1 className="text-3xl font-light tracking-tight mb-2">Global Settings</h1>
+        <p className="text-gray-400">Manage application settings and preferences</p>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border">
-        <form onSubmit={handleSubmit} className="space-y-8 p-6">
+      <div className="bg-[#111] rounded-lg border border-gray-800 p-8">
+        <form onSubmit={handleSubmit} className="space-y-8">
           <div className="space-y-6">
-            <div className="space-y-2">
-              <h2 className="text-lg font-medium text-foreground">Organization Settings</h2>
-              <p className="text-sm text-muted-foreground">
-                Configure your organization's basic information.
-              </p>
+            <h2 className="text-xl font-light">API Configuration</h2>
+            
+            <div className="space-y-3">
+              <Label htmlFor="apiKey" className="text-white">OpenAI API Key</Label>
+              <Input
+                id="apiKey"
+                value={formData.apiKey}
+                onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+                className="bg-[#181818] border-gray-700 text-white"
+              />
+              <p className="text-sm text-gray-400">Your OpenAI API key for content generation</p>
+            </div>
+          </div>
+          
+          <div className="space-y-6">
+            <h2 className="text-xl font-light">Email Settings</h2>
+            
+            <div className="space-y-3">
+              <Label htmlFor="emailSender" className="text-white">Email Sender</Label>
+              <Input
+                id="emailSender"
+                value={formData.emailSender}
+                onChange={(e) => setFormData({ ...formData, emailSender: e.target.value })}
+                className="bg-[#181818] border-gray-700 text-white"
+              />
+              <p className="text-sm text-gray-400">The email address that will be used to send newsletters</p>
             </div>
             
-            <div className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="organizationName">Organization Name</Label>
-                <Input
-                  id="organizationName"
-                  value={settings.organizationName}
-                  onChange={(e) =>
-                    setSettings({ ...settings, organizationName: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="timezone">Timezone</Label>
-                <Select
-                  value={settings.timezone}
-                  onValueChange={(value) =>
-                    setSettings({ ...settings, timezone: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select timezone" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="UTC">UTC</SelectItem>
-                    <SelectItem value="EST">EST</SelectItem>
-                    <SelectItem value="PST">PST</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-3">
+              <Label htmlFor="signature" className="text-white">Email Signature</Label>
+              <Textarea
+                id="signature"
+                value={formData.signature}
+                onChange={(e) => setFormData({ ...formData, signature: e.target.value })}
+                className="bg-[#181818] border-gray-700 text-white"
+                rows={3}
+              />
+              <p className="text-sm text-gray-400">Signature to append to the end of each email</p>
             </div>
           </div>
-
+          
           <div className="space-y-6">
-            <div className="space-y-2">
-              <h2 className="text-lg font-medium text-foreground">AI Configuration</h2>
-              <p className="text-sm text-muted-foreground">
-                Select which AI model to use for content generation.
-              </p>
-            </div>
-
-            <div className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="aiModule">AI Module</Label>
-                <Select
-                  value={settings.aiModule}
-                  onValueChange={(value) =>
-                    setSettings({ ...settings, aiModule: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select AI model" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="gpt-4">GPT-4</SelectItem>
-                    <SelectItem value="gpt-3.5">GPT-3.5</SelectItem>
-                    <SelectItem value="claude">Claude</SelectItem>
-                  </SelectContent>
-                </Select>
+            <h2 className="text-xl font-light">Notifications</h2>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="weeklyDigest" className="text-white">Weekly Digest</Label>
+                <p className="text-sm text-gray-400">Receive a weekly summary of insights</p>
               </div>
+              <Switch
+                id="weeklyDigest"
+                checked={formData.enableWeeklyDigest}
+                onCheckedChange={(checked) => setFormData({ ...formData, enableWeeklyDigest: checked })}
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="errorAlerts" className="text-white">Error Alerts</Label>
+                <p className="text-sm text-gray-400">Get notified when scraping jobs fail</p>
+              </div>
+              <Switch
+                id="errorAlerts"
+                checked={formData.enableErrorAlerts}
+                onCheckedChange={(checked) => setFormData({ ...formData, enableErrorAlerts: checked })}
+              />
             </div>
           </div>
-
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <h2 className="text-lg font-medium text-foreground">Email Settings</h2>
-              <p className="text-sm text-muted-foreground">
-                Configure your SMTP settings for sending newsletters.
-              </p>
-            </div>
-
-            <div className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="smtpHost">SMTP Host</Label>
-                <Input
-                  id="smtpHost"
-                  value={settings.smtpHost}
-                  onChange={(e) =>
-                    setSettings({ ...settings, smtpHost: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="smtpPort">SMTP Port</Label>
-                <Input
-                  id="smtpPort"
-                  value={settings.smtpPort}
-                  onChange={(e) =>
-                    setSettings({ ...settings, smtpPort: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="smtpUser">SMTP Username</Label>
-                <Input
-                  id="smtpUser"
-                  value={settings.smtpUser}
-                  onChange={(e) =>
-                    setSettings({ ...settings, smtpUser: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end">
-            <Button type="submit">Save Changes</Button>
+          
+          <div className="flex justify-end pt-4">
+            <Button 
+              type="submit"
+              className="bg-white text-black hover:bg-gray-200 font-light"
+            >
+              Save Settings
+            </Button>
           </div>
         </form>
       </div>

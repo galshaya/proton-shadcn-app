@@ -9,13 +9,13 @@ export function MainNav() {
 
   return (
     <nav>
-      <ul className="flex space-x-6">
+      <ul className="flex space-x-8">
         <li>
           <Link
             href="/"
             className={cn(
-              "text-sm transition-colors hover:text-gray-900",
-              pathname === "/" ? "text-gray-900 font-medium" : "text-gray-500"
+              "text-sm font-light transition-colors hover:text-white",
+              pathname === "/" ? "text-white" : "text-gray-400"
             )}
           >
             Overview
@@ -25,8 +25,8 @@ export function MainNav() {
           <Link
             href="/projects"
             className={cn(
-              "text-sm transition-colors hover:text-gray-900",
-              pathname.startsWith("/projects") ? "text-gray-900 font-medium" : "text-gray-500"
+              "text-sm font-light transition-colors hover:text-white",
+              pathname.startsWith("/projects") ? "text-white" : "text-gray-400"
             )}
           >
             Projects
@@ -36,22 +36,11 @@ export function MainNav() {
           <Link
             href="/scraping-packages"
             className={cn(
-              "text-sm transition-colors hover:text-gray-900",
-              pathname.startsWith("/scraping-packages") ? "text-gray-900 font-medium" : "text-gray-500"
+              "text-sm font-light transition-colors hover:text-white",
+              pathname.startsWith("/scraping-packages") ? "text-white" : "text-gray-400"
             )}
           >
-            Scraping Packages
-          </Link>
-        </li>
-        <li>
-          <Link
-            href="/settings"
-            className={cn(
-              "text-sm transition-colors hover:text-gray-900",
-              pathname.startsWith("/settings") ? "text-gray-900 font-medium" : "text-gray-500"
-            )}
-          >
-            Settings
+            Content Sources
           </Link>
         </li>
       </ul>

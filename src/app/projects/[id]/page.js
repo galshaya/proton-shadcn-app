@@ -10,43 +10,27 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { DataTable } from "@/components/ui/data-table";
 import { Modal } from "@/components/ui/modal";
 import { ProjectForm } from "@/components/forms/project-form";
-import { mockApi } from "@/lib/mock-data";
-import { PersonaForm } from "@/components/forms/persona-form";
 import { ScrapingPackageConfigForm } from "@/components/forms/scraping-package-config-form";
-import { ScrapingPackageHistory } from "@/components/scraping-package-history";
-import { Plus, Settings, History, Upload } from "lucide-react";
+import { mockApi } from "@/lib/mock-data";
+import { Upload, FileText, Plus, Settings, History, Edit, X } from "lucide-react";
 
 export default function ProjectPage() {
   const { id } = useParams();
   const [project, setProject] = useState(null);
   const [documents, setDocuments] = useState([]);
-  const [recipients, setRecipients] = useState([]);
+  const [packages, setPackages] = useState([]);
+  const [personas, setPersonas] = useState([]);
   const [newsletters, setNewsletters] = useState([]);
-  const [personas, setPersonas] = useState([
-    {
-      id: 1,
-      name: "General Persona",
-      description: "Default persona for all recipients",
-      recipientCount: 856,
-      lastModified: "2h ago"
-    },
-    {
-      id: 2,
-      name: "Executives",
-      description: "Specific adjustments for decision makers",
-      recipientCount: 378,
-      lastModified: "1d ago"
-    }
-  ]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isPersonaModalOpen, setIsPersonaModalOpen] = useState(false);
-  const [selectedPersona, setSelectedPersona] = useState(null);
   const [activeTab, setActiveTab] = useState("documents");
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showPackageModal, setShowPackageModal] = useState(false);
   const [showConfigureModal, setShowConfigureModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState(null);
-  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [dragActive, setDragActive] = useState(false);
 
   useEffect(() => {
     loadProjectData();
@@ -54,16 +38,18 @@ export default function ProjectPage() {
 
   const loadProjectData = async () => {
     try {
-      const [projectData, documentsData, recipientsData, newslettersData] = await Promise.all([
+      const [projectData, documentsData, packagesData, personasData, newslettersData] = await Promise.all([
         mockApi.getProject(id),
         mockApi.getProjectDocuments(id),
-        mockApi.getProjectRecipients(id),
+        mockApi.getProjectPackages(id),
+        mockApi.getPersonas(),
         mockApi.getProjectNewsletters(id),
       ]);
 
       setProject(projectData);
       setDocuments(documentsData);
-      setRecipients(recipientsData);
+      setPackages(packagesData);
+      setPersonas(personasData);
       setNewsletters(newslettersData);
     } catch (error) {
       console.error("Error loading project data:", error);
@@ -82,32 +68,111 @@ export default function ProjectPage() {
     }
   };
 
-  const handleCreatePersona = (data) => {
-    const newPersona = {
-      id: personas.length + 1,
-      ...data,
+  const handleCreatePackage = (formData) => {
+    const newPackage = {
+      id: "pkg_" + Math.random().toString(36).substring(2, 9),
+      ...formData,
+      projectId: id,
+      createdAt: new Date().toISOString(),
+      lastRun: null,
+      nextRun: formData.schedule?.date || null,
+      status: "active"
     };
-    setPersonas([...personas, newPersona]);
-    setIsPersonaModalOpen(false);
-  };
+    setPackages([...packages, newPackage]);
+    setShowPackageModal(false);
+  }
 
-  const handleEditPersona = (data) => {
-    const updatedPersonas = personas.map((persona) =>
-      persona.id === selectedPersona.id ? { ...persona, ...data } : persona
+  const handleEditPackage = (formData) => {
+    const updatedPackages = packages.map((pkg) =>
+      pkg.id === selectedPackage.id ? { ...pkg, ...formData } : pkg
     );
-    setPersonas(updatedPersonas);
-    setIsPersonaModalOpen(false);
-    setSelectedPersona(null);
-  };
-
-  const handleConfigurePackage = (data) => {
-    // Handle package configuration
-    setShowConfigureModal(false);
+    setPackages(updatedPackages);
     setSelectedPackage(null);
+    setShowPackageModal(false);
+  }
+
+  const handleConfigurePackage = (pkg) => {
+    setSelectedPackage(pkg);
+    setShowConfigureModal(true);
+  }
+
+  const handleViewHistory = (pkg) => {
+    setSelectedPackage(pkg);
+    setShowHistoryModal(true);
+  }
+
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
   };
 
-  const handleUploadDocument = (files) => {
-    // Handle document upload
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFiles(e.dataTransfer.files);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      handleFiles(e.target.files);
+    }
+  };
+
+  const handleFiles = (files) => {
+    const newFiles = Array.from(files).map(file => ({
+      id: "file_" + Math.random().toString(36).substring(2, 9),
+      name: file.name,
+      size: formatFileSize(file.size),
+      type: file.type,
+      file: file
+    }));
+    setUploadedFiles([...uploadedFiles, ...newFiles]);
+  };
+
+  const removeFile = (id) => {
+    setUploadedFiles(uploadedFiles.filter(file => file.id !== id));
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    else return (bytes / 1048576).toFixed(1) + ' MB';
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "Invalid Date";
+    }
+  };
+
+  const handleUploadDocument = () => {
+    // Simulate upload and add to documents
+    const newDocs = uploadedFiles.map(file => ({
+      id: "doc_" + Math.random().toString(36).substring(2, 9),
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      uploadedAt: new Date().toISOString()
+    }));
+    
+    setDocuments([...documents, ...newDocs]);
+    setUploadedFiles([]);
     setShowUploadModal(false);
   };
 
@@ -120,61 +185,66 @@ export default function ProjectPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
+    <div className="container mx-auto px-4 py-8 space-y-6 text-white">
       <div className="flex justify-between items-center">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold text-foreground">{project.name}</h1>
-          <p className="text-sm text-muted-foreground">{project.description}</p>
+          <p className="text-sm text-gray-400">{project.description}</p>
         </div>
-        <Button onClick={() => setIsEditModalOpen(true)}>Edit Project</Button>
+        <Button 
+          onClick={() => setIsEditModalOpen(true)}
+          className="bg-[#e80566] hover:bg-[#c30552] text-white"
+        >
+          Edit Project
+        </Button>
       </div>
 
       <div className="grid grid-cols-4 gap-4 mb-8">
-        <Card>
+        <Card className="bg-[#1e1f23] border-[#2d2e33] text-white">
           <CardHeader className="p-4">
-            <CardTitle className="text-sm font-medium">Documents</CardTitle>
-            <div className="text-2xl font-bold">{project.documents}</div>
+            <CardTitle className="text-sm font-medium text-gray-300">Documents</CardTitle>
+            <div className="text-2xl font-bold text-white">{documents.length}</div>
           </CardHeader>
         </Card>
-        <Card>
+        <Card className="bg-[#1e1f23] border-[#2d2e33] text-white">
           <CardHeader className="p-4">
-            <CardTitle className="text-sm font-medium">Next Newsletter</CardTitle>
-            <div className="text-2xl font-bold">{new Date(project.nextNewsletter).toLocaleDateString()}</div>
+            <CardTitle className="text-sm font-medium text-gray-300">Next Newsletter</CardTitle>
+            <div className="text-2xl font-bold text-white">{formatDate(project.nextNewsletter)}</div>
           </CardHeader>
         </Card>
-        <Card>
+        <Card className="bg-[#1e1f23] border-[#2d2e33] text-white">
           <CardHeader className="p-4">
-            <CardTitle className="text-sm font-medium">Recipients</CardTitle>
-            <div className="text-2xl font-bold">{project.recipients}</div>
+            <CardTitle className="text-sm font-medium text-gray-300">Scraping Packages</CardTitle>
+            <div className="text-2xl font-bold text-white">{packages.length}</div>
           </CardHeader>
         </Card>
-        <Card>
+        <Card className="bg-[#1e1f23] border-[#2d2e33] text-white">
           <CardHeader className="p-4">
-            <CardTitle className="text-sm font-medium">Last Updated</CardTitle>
-            <div className="text-2xl font-bold">{new Date(project.lastUpdated).toLocaleDateString()}</div>
+            <CardTitle className="text-sm font-medium text-gray-300">Last Updated</CardTitle>
+            <div className="text-2xl font-bold text-white">{formatDate(project.lastUpdated)}</div>
           </CardHeader>
         </Card>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-white border-b rounded-none w-full justify-start h-auto p-0">
+        <TabsList className="bg-[#1e1f23] border-b border-[#2d2e33] rounded-none w-full justify-start h-auto p-0">
           <TabsTrigger 
             value="documents"
-            className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-3"
+            className="data-[state=active]:border-b-2 data-[state=active]:border-[#e80566] rounded-none px-4 py-3 text-gray-300 data-[state=active]:text-white"
           >
             Documents
           </TabsTrigger>
           <TabsTrigger 
             value="newsletter"
-            className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-3"
+            className="data-[state=active]:border-b-2 data-[state=active]:border-[#e80566] rounded-none px-4 py-3 text-gray-300 data-[state=active]:text-white"
           >
             Newsletter Settings
           </TabsTrigger>
           <TabsTrigger 
-            value="personas"
-            className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-3"
+            value="scraping"
+            className="data-[state=active]:border-b-2 data-[state=active]:border-[#e80566] rounded-none px-4 py-3 text-gray-300 data-[state=active]:text-white"
           >
-            Personas & Recipients
+            Scraping Packages
           </TabsTrigger>
         </TabsList>
 
@@ -182,77 +252,96 @@ export default function ProjectPage() {
           <div className="flex justify-between items-center">
             <div className="space-y-1">
               <h2 className="text-lg font-medium">Documents</h2>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-400">
                 Manage project documents and files
               </p>
             </div>
-            <Button onClick={() => setShowUploadModal(true)}>
+            <Button 
+              onClick={() => setShowUploadModal(true)}
+              className="bg-[#e80566] hover:bg-[#c30552] text-white"
+            >
               <Upload className="h-4 w-4 mr-2" />
               Upload Document
             </Button>
           </div>
 
-          <div className="grid gap-4">
-            {documents.map((doc) => (
-              <Card key={doc.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium">{doc.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {doc.size} • Uploaded {new Date(doc.uploadedAt).toLocaleDateString()}
-                      </p>
+          {documents.length === 0 ? (
+            <div className="text-center py-12 border border-dashed border-[#2d2e33] rounded-md bg-[#1e1f23]">
+              <FileText className="h-12 w-12 mx-auto text-gray-500 mb-4" />
+              <h3 className="text-lg font-medium mb-2 text-white">No Documents Yet</h3>
+              <p className="text-sm text-gray-400 mb-4">
+                Upload documents to get started with your project
+              </p>
+              <Button 
+                onClick={() => setShowUploadModal(true)}
+                className="bg-[#e80566] hover:bg-[#c30552] text-white"
+              >
+                Upload Document
+              </Button>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {documents.map((doc) => (
+                <Card className="bg-[#1e1f23] border-[#2d2e33] text-white">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-medium text-white">{doc.name}</h3>
+                        <p className="text-sm text-gray-400">
+                          {doc.size} • Uploaded {formatDate(doc.uploadedAt)}
+                        </p>
+                      </div>
+                      <Button variant="outline" size="sm" className="border-[#2d2e33] text-white hover:bg-[#2d2e33] hover:text-white">
+                        Download
+                      </Button>
                     </div>
-                    <Button variant="outline" size="sm">
-                      Download
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="newsletter" className="space-y-6">
           <div className="space-y-1">
             <h2 className="text-lg font-medium">Newsletter Settings</h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-gray-400">
               Configure newsletter delivery schedule and settings
             </p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border p-6 space-y-8">
+          <div className="bg-[#1e1f23] rounded-lg shadow-sm border border-[#2d2e33] p-6 space-y-8">
             <div className="space-y-4">
-              <h3 className="text-sm font-medium">Frequency & Schedule</h3>
+              <h3 className="text-sm font-medium text-white">Frequency & Schedule</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
-                  <label className="text-sm text-muted-foreground">Delivery Frequency</label>
+                  <label className="text-sm text-gray-400">Delivery Frequency</label>
                   <div className="flex gap-2">
-                    <Button variant="default" size="sm">Daily</Button>
-                    <Button variant="outline" size="sm">Weekly</Button>
-                    <Button variant="outline" size="sm">Monthly</Button>
-                    <Button variant="outline" size="sm">Custom</Button>
+                    <Button variant="default" size="sm" className="bg-[#e80566] text-white">Weekly</Button>
+                    <Button variant="outline" size="sm" className="border-[#2d2e33] text-gray-300 hover:bg-[#2d2e33]">Bi-weekly</Button>
+                    <Button variant="outline" size="sm" className="border-[#2d2e33] text-gray-300 hover:bg-[#2d2e33]">Monthly</Button>
+                    <Button variant="outline" size="sm" className="border-[#2d2e33] text-gray-300 hover:bg-[#2d2e33]">Custom</Button>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm text-muted-foreground">Send Time</label>
-                  <Button variant="outline" className="w-full justify-between">
+                  <label className="text-sm text-gray-400">Send Time</label>
+                  <Button variant="outline" className="w-full justify-between border-[#2d2e33] text-gray-300 hover:bg-[#2d2e33]">
                     9:00 AM
-                    <span className="text-muted-foreground">▼</span>
+                    <span className="text-gray-500">▼</span>
                   </Button>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm text-muted-foreground">Day of Week</label>
-                  <Button variant="outline" className="w-full justify-between">
+                  <label className="text-sm text-gray-400">Day of Week</label>
+                  <Button variant="outline" className="w-full justify-between border-[#2d2e33] text-gray-300 hover:bg-[#2d2e33]">
                     Monday
-                    <span className="text-muted-foreground">▼</span>
+                    <span className="text-gray-500">▼</span>
                   </Button>
                 </div>
               </div>
             </div>
 
             <div className="flex justify-end">
-              <Button>Save Settings</Button>
+              <Button className="bg-[#e80566] hover:bg-[#c30552] text-white">Save Settings</Button>
             </div>
           </div>
 
@@ -270,21 +359,21 @@ export default function ProjectPage() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow-sm border divide-y">
+              <div className="bg-[#1e1f23] rounded-lg shadow-sm border border-[#2d2e33] divide-y divide-[#2d2e33]">
                 {newsletters.map((newsletter) => (
                   <div key={newsletter.id} className="p-4 space-y-2">
                     <div className="flex justify-between">
-                      <h4 className="font-medium">{newsletter.subject}</h4>
-                      <span className="text-sm text-muted-foreground">
-                        {new Date(newsletter.sentAt || newsletter.scheduledFor).toLocaleDateString()}
+                      <h4 className="font-medium text-white">{newsletter.subject}</h4>
+                      <span className="text-sm text-gray-400">
+                        {formatDate(newsletter.sentAt || newsletter.scheduledFor)}
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Sent to {newsletter.recipients?.length || 0} recipients
+                    <p className="text-sm text-gray-400">
+                      Sent to {newsletter.recipients} recipients
                     </p>
                     <div className="flex gap-4 text-sm">
-                      <span>Open Rate: {newsletter.stats?.openRate || 0}%</span>
-                      <span>Click Rate: {newsletter.stats?.clickRate || 0}%</span>
+                      <span className="text-gray-300">Open Rate: {newsletter.stats?.openRate || 0}%</span>
+                      <span className="text-gray-300">Click Rate: {newsletter.stats?.clickRate || 0}%</span>
                     </div>
                   </div>
                 ))}
@@ -293,128 +382,124 @@ export default function ProjectPage() {
 
             <div className="space-y-4">
               <h3 className="text-sm font-medium">Analytics Overview</h3>
-              <div className="bg-white rounded-lg shadow-sm border p-4 space-y-6">
+              <div className="bg-[#1e1f23] rounded-lg shadow-sm border border-[#2d2e33] p-4 space-y-6">
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Average Open Rate</p>
-                  <p className="text-2xl font-semibold">68.3%</p>
+                  <p className="text-sm text-gray-400">Average Open Rate</p>
+                  <p className="text-2xl font-semibold text-white">68.3%</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Average Click Rate</p>
-                  <p className="text-2xl font-semibold">38.3%</p>
+                  <p className="text-sm text-gray-400">Average Click Rate</p>
+                  <p className="text-2xl font-semibold text-white">38.3%</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Total Subscribers</p>
-                  <p className="text-2xl font-semibold">{recipients.length}</p>
+                  <p className="text-sm text-gray-400">Total Subscribers</p>
+                  <p className="text-2xl font-semibold text-white">{project.recipients}</p>
                 </div>
-                <Button variant="outline" className="w-full">Download Report</Button>
+                <Button variant="outline" className="w-full border-[#2d2e33] text-gray-300 hover:bg-[#2d2e33]">Download Report</Button>
               </div>
             </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="personas" className="space-y-6">
+        <TabsContent value="scraping" className="space-y-4">
           <div className="flex justify-between items-center">
             <div className="space-y-1">
-              <h2 className="text-lg font-medium">Personas</h2>
-              <p className="text-sm text-muted-foreground">
-                Manage content personas and recipients
+              <h2 className="text-lg font-medium">Scraping Packages</h2>
+              <p className="text-sm text-gray-400">
+                Manage and configure content scraping packages
               </p>
             </div>
-            <Button onClick={() => {
-              setSelectedPersona(null)
-              setIsPersonaModalOpen(true)
-            }}>
+            <Button 
+              onClick={() => {
+                setSelectedPackage(null);
+                setShowPackageModal(true);
+              }}
+              className="bg-[#e80566] hover:bg-[#c30552] text-white"
+            >
               <Plus className="h-4 w-4 mr-2" />
-              Add Persona
+              Add Package
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {personas.map((persona) => (
-              <div key={persona.id} className="bg-white rounded-lg shadow-sm border p-6 space-y-4">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <h3 className="font-medium">{persona.name}</h3>
-                    <p className="text-sm text-muted-foreground">{persona.description}</p>
-                  </div>
-                  <Button variant="ghost" size="icon">⋮</Button>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Recipients</span>
-                  <span className="font-medium">{persona.recipientCount}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Last Modified</span>
-                  <span className="font-medium">{persona.lastModified}</span>
-                </div>
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => {
-                    setSelectedPersona(persona)
-                    setIsPersonaModalOpen(true)
-                  }}
-                >
-                  Edit Persona
-                </Button>
-              </div>
-            ))}
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium">Recipients</h3>
-              <div className="flex gap-2">
-                <Button variant="outline">Filter</Button>
-                <Button>Add Recipients</Button>
-              </div>
+          {packages.length === 0 ? (
+            <div className="text-center py-12 border border-dashed border-[#2d2e33] rounded-md bg-[#1e1f23]">
+              <h3 className="text-lg font-medium mb-2 text-white">No Scraping Packages Yet</h3>
+              <p className="text-sm text-gray-400 mb-4">
+                Create a scraping package to automate content collection
+              </p>
+              <Button 
+                onClick={() => {
+                  setSelectedPackage(null);
+                  setShowPackageModal(true);
+                }}
+                className="bg-[#e80566] hover:bg-[#c30552] text-white"
+              >
+                Add Package
+              </Button>
             </div>
-
-            <div className="bg-white rounded-lg shadow-sm border">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-4 text-sm font-medium text-muted-foreground">Name</th>
-                      <th className="text-left p-4 text-sm font-medium text-muted-foreground">Email</th>
-                      <th className="text-left p-4 text-sm font-medium text-muted-foreground">Persona</th>
-                      <th className="text-left p-4 text-sm font-medium text-muted-foreground">Status</th>
-                      <th className="text-left p-4 text-sm font-medium text-muted-foreground">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {recipients.map((recipient) => (
-                      <tr key={recipient.id}>
-                        <td className="p-4">{recipient.name}</td>
-                        <td className="p-4">{recipient.email}</td>
-                        <td className="p-4">
-                          <Button variant="outline" size="sm" className="w-40 justify-between">
-                            {recipient.persona || "General Persona"}
-                            <span className="text-muted-foreground">▼</span>
-                          </Button>
-                        </td>
-                        <td className="p-4">
-                          <StatusBadge status={recipient.status || "active"} />
-                        </td>
-                        <td className="p-4">
-                          <Button variant="ghost" size="icon">⋮</Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="p-4 border-t">
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>Showing 1-10 of {recipients.length}</span>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">Previous</Button>
-                    <Button variant="outline" size="sm">Next</Button>
-                  </div>
-                </div>
-              </div>
+          ) : (
+            <div className="grid gap-4">
+              {packages.map((pkg) => (
+                <Card className="bg-[#1e1f23] border-[#2d2e33] text-white">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium text-white">{pkg.name}</h3>
+                          <Badge variant={pkg.status === "active" ? "default" : "secondary"} className={pkg.status === "active" ? "bg-[#e80566] text-white" : "bg-[#2d2e33] text-gray-300"}>
+                            {pkg.status}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-gray-400 mt-1">
+                          {pkg.description}
+                        </p>
+                        <div className="flex gap-4 text-sm mt-3">
+                          <span className="text-gray-400">
+                            Last run: {pkg.lastRun ? formatDate(pkg.lastRun) : "Never"}
+                          </span>
+                          <span className="text-gray-400">
+                            Next run: {formatDate(pkg.nextRun)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleViewHistory(pkg)}
+                          className="border-[#2d2e33] text-white hover:bg-[#2d2e33] hover:text-white"
+                        >
+                          <History className="h-4 w-4 mr-2" />
+                          History
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleConfigurePackage(pkg)}
+                          className="border-[#2d2e33] text-white hover:bg-[#2d2e33] hover:text-white"
+                        >
+                          <Settings className="h-4 w-4 mr-2" />
+                          Configure
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedPackage(pkg);
+                            setShowPackageModal(true);
+                          }}
+                          className="border-[#2d2e33] text-white hover:bg-[#2d2e33] hover:text-white"
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          </div>
+          )}
         </TabsContent>
       </Tabs>
 
@@ -431,20 +516,100 @@ export default function ProjectPage() {
       </Modal>
 
       <Modal
-        isOpen={isPersonaModalOpen}
-        onClose={() => {
-          setIsPersonaModalOpen(false);
-          setSelectedPersona(null);
-        }}
-        title={selectedPersona ? "Edit Persona" : "Create Persona"}
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        title="Upload Document"
       >
-        <PersonaForm
-          persona={selectedPersona}
-          recipients={recipients}
-          onSubmit={selectedPersona ? handleEditPersona : handleCreatePersona}
+        <div className="space-y-6">
+          <div 
+            className={`border-2 border-dashed rounded-lg p-10 text-center ${
+              dragActive ? "border-[#e80566] bg-[#e80566]/5" : "border-[#2d2e33]"
+            } bg-[#1e1f23]`}
+            onDragEnter={handleDrag}
+            onDragOver={handleDrag}
+            onDragLeave={handleDrag}
+            onDrop={handleDrop}
+          >
+            <p className="text-gray-400 mb-2">Drag and drop your file here, or</p>
+            <input
+              type="file"
+              id="file-input"
+              className="hidden"
+              multiple
+              onChange={handleFileChange}
+            />
+            <label htmlFor="file-input">
+              <Button 
+                as="span"
+                className="bg-[#e80566] hover:bg-[#c30552] text-white cursor-pointer"
+              >
+                Browse Files
+              </Button>
+            </label>
+            <p className="text-xs text-gray-500 mt-4">Supported file types: PDF, DOCX, XLSX, CSV, TXT (Max 10MB)</p>
+          </div>
+
+          {uploadedFiles.length > 0 && (
+            <div className="border border-[#2d2e33] rounded-md divide-y divide-[#2d2e33] bg-[#1e1f23]">
+              {uploadedFiles.map((file) => (
+                <div key={file.id} className="flex items-center justify-between p-3">
+                  <div className="flex items-center">
+                    <FileText className="h-5 w-5 mr-3 text-gray-400" />
+                    <div>
+                      <p className="font-medium text-white">{file.name}</p>
+                      <p className="text-xs text-gray-400">{file.size}</p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => removeFile(file.id)}
+                    className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-[#2d2e33]"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <div className="flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setUploadedFiles([]);
+                setShowUploadModal(false);
+              }}
+              className="border-[#2d2e33] text-gray-300 hover:bg-[#2d2e33]"
+            >
+              Cancel
+            </Button>
+            <Button 
+              disabled={uploadedFiles.length === 0}
+              onClick={handleUploadDocument}
+              className="bg-[#e80566] hover:bg-[#c30552] text-white disabled:bg-[#2d2e33] disabled:text-gray-500"
+            >
+              Upload
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showPackageModal}
+        onClose={() => {
+          setShowPackageModal(false);
+          setSelectedPackage(null);
+        }}
+        title={selectedPackage ? "Edit Scraping Package" : "Create Scraping Package"}
+      >
+        <ScrapingPackageConfigForm
+          scrapingPackage={selectedPackage}
+          personas={personas}
+          onSubmit={selectedPackage ? handleEditPackage : handleCreatePackage}
           onCancel={() => {
-            setIsPersonaModalOpen(false);
-            setSelectedPersona(null);
+            setShowPackageModal(false);
+            setSelectedPackage(null);
           }}
         />
       </Modal>
@@ -455,55 +620,24 @@ export default function ProjectPage() {
           setShowConfigureModal(false);
           setSelectedPackage(null);
         }}
-        title={selectedPackage ? "Configure Package" : "Add Package"}
+        title={`Configure ${selectedPackage?.name || 'Scraping Package'}`}
       >
         <ScrapingPackageConfigForm
-          config={selectedPackage}
-          onSubmit={handleConfigurePackage}
+          scrapingPackage={selectedPackage}
+          personas={personas}
+          onSubmit={(formData) => {
+            const updatedPackages = packages.map((pkg) =>
+              pkg.id === selectedPackage.id ? { ...pkg, ...formData } : pkg
+            );
+            setPackages(updatedPackages);
+            setSelectedPackage(null);
+            setShowConfigureModal(false);
+          }}
           onCancel={() => {
             setShowConfigureModal(false);
             setSelectedPackage(null);
           }}
         />
-      </Modal>
-
-      <Modal
-        isOpen={showHistoryModal}
-        onClose={() => {
-          setShowHistoryModal(false);
-          setSelectedPackage(null);
-        }}
-        title="Package History"
-      >
-        <ScrapingPackageHistory history={[]} />
-      </Modal>
-
-      <Modal
-        isOpen={showUploadModal}
-        onClose={() => setShowUploadModal(false)}
-        title="Upload Document"
-      >
-        <div className="space-y-4">
-          <div className="border-2 border-dashed rounded-lg p-8 text-center">
-            <Upload className="h-8 w-8 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground mb-2">
-              Drag and drop your files here, or click to select files
-            </p>
-            <input
-              type="file"
-              className="hidden"
-              onChange={(e) => handleUploadDocument(e.target.files)}
-              multiple
-            />
-            <Button variant="outline">Select Files</Button>
-          </div>
-          <div className="flex justify-end gap-4">
-            <Button variant="outline" onClick={() => setShowUploadModal(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">Upload</Button>
-          </div>
-        </div>
       </Modal>
     </div>
   );
