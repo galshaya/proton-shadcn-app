@@ -12,7 +12,8 @@ import { Modal } from "@/components/ui/modal";
 import { ProjectForm } from "@/components/forms/project-form";
 import { ScrapingPackageConfigForm } from "@/components/forms/scraping-package-config-form";
 import { mockApi } from "@/lib/mock-data";
-import { Upload, FileText, Plus, Settings, History, Edit, X } from "lucide-react";
+import { Upload, FileText, Plus, Settings, History, Edit, X, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 export default function ProjectPage() {
   const { id } = useParams();
@@ -31,6 +32,7 @@ export default function ProjectPage() {
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [dragActive, setDragActive] = useState(false);
+  const [searchNewsletter, setSearchNewsletter] = useState("");
 
   useEffect(() => {
     loadProjectData();
@@ -176,6 +178,10 @@ export default function ProjectPage() {
     setShowUploadModal(false);
   };
 
+  const filteredNewsletters = newsletters.filter(newsletter => 
+    newsletter.subject.toLowerCase().includes(searchNewsletter.toLowerCase())
+  );
+
   if (isLoading) {
     return <div className="container mx-auto px-4 py-8">Loading...</div>;
   }
@@ -185,64 +191,64 @@ export default function ProjectPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6 text-white">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-foreground">{project.name}</h1>
+          <h1 className="text-2xl font-light">{project.name}</h1>
           <p className="text-sm text-gray-400">{project.description}</p>
         </div>
         <Button 
           onClick={() => setIsEditModalOpen(true)}
-          className="bg-[#e80566] hover:bg-[#c30552] text-white"
+          className="bg-white text-black hover:bg-gray-200 font-light"
         >
           Edit Project
         </Button>
       </div>
 
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        <Card className="bg-[#1e1f23] border-[#2d2e33] text-white">
-          <CardHeader className="p-4">
-            <CardTitle className="text-sm font-medium text-gray-300">Documents</CardTitle>
-            <div className="text-2xl font-bold text-white">{documents.length}</div>
-          </CardHeader>
-        </Card>
-        <Card className="bg-[#1e1f23] border-[#2d2e33] text-white">
-          <CardHeader className="p-4">
-            <CardTitle className="text-sm font-medium text-gray-300">Next Newsletter</CardTitle>
-            <div className="text-2xl font-bold text-white">{formatDate(project.nextNewsletter)}</div>
-          </CardHeader>
-        </Card>
-        <Card className="bg-[#1e1f23] border-[#2d2e33] text-white">
-          <CardHeader className="p-4">
-            <CardTitle className="text-sm font-medium text-gray-300">Scraping Packages</CardTitle>
-            <div className="text-2xl font-bold text-white">{packages.length}</div>
-          </CardHeader>
-        </Card>
-        <Card className="bg-[#1e1f23] border-[#2d2e33] text-white">
-          <CardHeader className="p-4">
-            <CardTitle className="text-sm font-medium text-gray-300">Last Updated</CardTitle>
-            <div className="text-2xl font-bold text-white">{formatDate(project.lastUpdated)}</div>
-          </CardHeader>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-[#111] p-6 rounded border border-gray-800 hover:border-gray-700 transition-colors">
+          <div className="space-y-2">
+            <p className="text-sm text-gray-400 font-light">Documents</p>
+            <div className="text-2xl font-light">{documents.length}</div>
+          </div>
+        </div>
+        <div className="bg-[#111] p-6 rounded border border-gray-800 hover:border-gray-700 transition-colors">
+          <div className="space-y-2">
+            <p className="text-sm text-gray-400 font-light">Next Newsletter</p>
+            <div className="text-2xl font-light">{formatDate(project.nextNewsletter)}</div>
+          </div>
+        </div>
+        <div className="bg-[#111] p-6 rounded border border-gray-800 hover:border-gray-700 transition-colors">
+          <div className="space-y-2">
+            <p className="text-sm text-gray-400 font-light">Scraping Packages</p>
+            <div className="text-2xl font-light">{packages.length}</div>
+          </div>
+        </div>
+        <div className="bg-[#111] p-6 rounded border border-gray-800 hover:border-gray-700 transition-colors">
+          <div className="space-y-2">
+            <p className="text-sm text-gray-400 font-light">Last Updated</p>
+            <div className="text-2xl font-light">{formatDate(project.lastUpdated)}</div>
+          </div>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-[#1e1f23] border-b border-[#2d2e33] rounded-none w-full justify-start h-auto p-0">
+        <TabsList className="bg-transparent border-b border-gray-800 rounded-none w-full justify-start h-auto p-0">
           <TabsTrigger 
             value="documents"
-            className="data-[state=active]:border-b-2 data-[state=active]:border-[#e80566] rounded-none px-4 py-3 text-gray-300 data-[state=active]:text-white"
+            className="rounded-none px-4 py-2 text-gray-400 data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-white font-light"
           >
             Documents
           </TabsTrigger>
           <TabsTrigger 
             value="newsletter"
-            className="data-[state=active]:border-b-2 data-[state=active]:border-[#e80566] rounded-none px-4 py-3 text-gray-300 data-[state=active]:text-white"
+            className="rounded-none px-4 py-2 text-gray-400 data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-white font-light"
           >
             Newsletter Settings
           </TabsTrigger>
           <TabsTrigger 
             value="scraping"
-            className="data-[state=active]:border-b-2 data-[state=active]:border-[#e80566] rounded-none px-4 py-3 text-gray-300 data-[state=active]:text-white"
+            className="rounded-none px-4 py-2 text-gray-400 data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-white font-light"
           >
             Scraping Packages
           </TabsTrigger>
@@ -251,14 +257,14 @@ export default function ProjectPage() {
         <TabsContent value="documents" className="space-y-4">
           <div className="flex justify-between items-center">
             <div className="space-y-1">
-              <h2 className="text-lg font-medium">Documents</h2>
+              <h2 className="text-lg font-light">Documents</h2>
               <p className="text-sm text-gray-400">
                 Manage project documents and files
               </p>
             </div>
             <Button 
               onClick={() => setShowUploadModal(true)}
-              className="bg-[#e80566] hover:bg-[#c30552] text-white"
+              className="bg-white text-black hover:bg-gray-200 font-light"
             >
               <Upload className="h-4 w-4 mr-2" />
               Upload Document
@@ -266,15 +272,15 @@ export default function ProjectPage() {
           </div>
 
           {documents.length === 0 ? (
-            <div className="text-center py-12 border border-dashed border-[#2d2e33] rounded-md bg-[#1e1f23]">
+            <div className="text-center py-12 border border-dashed border-gray-800 rounded-md bg-[#111]">
               <FileText className="h-12 w-12 mx-auto text-gray-500 mb-4" />
-              <h3 className="text-lg font-medium mb-2 text-white">No Documents Yet</h3>
+              <h3 className="text-lg font-light mb-2">No Documents Yet</h3>
               <p className="text-sm text-gray-400 mb-4">
                 Upload documents to get started with your project
               </p>
               <Button 
                 onClick={() => setShowUploadModal(true)}
-                className="bg-[#e80566] hover:bg-[#c30552] text-white"
+                className="bg-white text-black hover:bg-gray-200 font-light"
               >
                 Upload Document
               </Button>
@@ -282,21 +288,23 @@ export default function ProjectPage() {
           ) : (
             <div className="grid gap-4">
               {documents.map((doc) => (
-                <Card className="bg-[#1e1f23] border-[#2d2e33] text-white">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium text-white">{doc.name}</h3>
-                        <p className="text-sm text-gray-400">
-                          {doc.size} • Uploaded {formatDate(doc.uploadedAt)}
-                        </p>
-                      </div>
-                      <Button variant="outline" size="sm" className="border-[#2d2e33] text-white hover:bg-[#2d2e33] hover:text-white">
-                        Download
-                      </Button>
+                <div key={doc.id} className="bg-[#111] p-4 rounded border border-gray-800 hover:border-gray-700 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-light text-white">{doc.name}</h3>
+                      <p className="text-sm text-gray-400">
+                        {doc.size} • Uploaded {formatDate(doc.uploadedAt)}
+                      </p>
                     </div>
-                  </CardContent>
-                </Card>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
+                    >
+                      Download
+                    </Button>
+                  </div>
+                </div>
               ))}
             </div>
           )}
@@ -304,35 +312,35 @@ export default function ProjectPage() {
 
         <TabsContent value="newsletter" className="space-y-6">
           <div className="space-y-1">
-            <h2 className="text-lg font-medium">Newsletter Settings</h2>
+            <h2 className="text-lg font-light">Newsletter Settings</h2>
             <p className="text-sm text-gray-400">
               Configure newsletter delivery schedule and settings
             </p>
           </div>
 
-          <div className="bg-[#1e1f23] rounded-lg shadow-sm border border-[#2d2e33] p-6 space-y-8">
+          <div className="bg-[#111] rounded-lg border border-gray-800 p-6 space-y-8">
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-white">Frequency & Schedule</h3>
+              <h3 className="text-sm font-medium">Frequency & Schedule</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
-                  <label className="text-sm text-gray-400">Delivery Frequency</label>
+                  <label className="text-sm text-gray-400 font-light">Delivery Frequency</label>
                   <div className="flex gap-2">
-                    <Button variant="default" size="sm" className="bg-[#e80566] text-white">Weekly</Button>
-                    <Button variant="outline" size="sm" className="border-[#2d2e33] text-gray-300 hover:bg-[#2d2e33]">Bi-weekly</Button>
-                    <Button variant="outline" size="sm" className="border-[#2d2e33] text-gray-300 hover:bg-[#2d2e33]">Monthly</Button>
-                    <Button variant="outline" size="sm" className="border-[#2d2e33] text-gray-300 hover:bg-[#2d2e33]">Custom</Button>
+                    <Button variant="default" size="sm" className="bg-white text-black hover:bg-gray-200 font-light">Weekly</Button>
+                    <Button variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light">Bi-weekly</Button>
+                    <Button variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light">Monthly</Button>
+                    <Button variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light">Custom</Button>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm text-gray-400">Send Time</label>
-                  <Button variant="outline" className="w-full justify-between border-[#2d2e33] text-gray-300 hover:bg-[#2d2e33]">
+                  <label className="text-sm text-gray-400 font-light">Send Time</label>
+                  <Button variant="outline" className="w-full justify-between border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light">
                     9:00 AM
                     <span className="text-gray-500">▼</span>
                   </Button>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm text-gray-400">Day of Week</label>
-                  <Button variant="outline" className="w-full justify-between border-[#2d2e33] text-gray-300 hover:bg-[#2d2e33]">
+                  <label className="text-sm text-gray-400 font-light">Day of Week</label>
+                  <Button variant="outline" className="w-full justify-between border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light">
                     Monday
                     <span className="text-gray-500">▼</span>
                   </Button>
@@ -341,61 +349,73 @@ export default function ProjectPage() {
             </div>
 
             <div className="flex justify-end">
-              <Button className="bg-[#e80566] hover:bg-[#c30552] text-white">Save Settings</Button>
+              <Button className="bg-white text-black hover:bg-gray-200 font-light">Save Settings</Button>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className="text-sm font-medium">Sent Newsletters</h3>
-                <div className="relative">
-                  <input
-                    type="search"
+                <h3 className="text-sm font-light">Sent Newsletters</h3>
+                <div className="relative max-w-sm">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                  <Input
                     placeholder="Search newsletters..."
-                    className="pl-3 pr-8 py-2 text-sm border rounded-md"
+                    className="pl-8 bg-[#111] border-gray-800 text-white"
+                    value={searchNewsletter}
+                    onChange={(e) => setSearchNewsletter(e.target.value)}
                   />
-                  <span className="absolute right-3 top-2.5">🔍</span>
                 </div>
               </div>
 
-              <div className="bg-[#1e1f23] rounded-lg shadow-sm border border-[#2d2e33] divide-y divide-[#2d2e33]">
-                {newsletters.map((newsletter) => (
-                  <div key={newsletter.id} className="p-4 space-y-2">
-                    <div className="flex justify-between">
-                      <h4 className="font-medium text-white">{newsletter.subject}</h4>
-                      <span className="text-sm text-gray-400">
-                        {formatDate(newsletter.sentAt || newsletter.scheduledFor)}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-400">
-                      Sent to {newsletter.recipients} recipients
-                    </p>
-                    <div className="flex gap-4 text-sm">
-                      <span className="text-gray-300">Open Rate: {newsletter.stats?.openRate || 0}%</span>
-                      <span className="text-gray-300">Click Rate: {newsletter.stats?.clickRate || 0}%</span>
-                    </div>
+              <div className="bg-[#111] rounded-lg border border-gray-800 divide-y divide-gray-800">
+                {filteredNewsletters.length === 0 ? (
+                  <div className="p-4 text-center text-gray-400">
+                    No newsletters found
                   </div>
-                ))}
+                ) : (
+                  filteredNewsletters.map((newsletter) => (
+                    <div key={newsletter.id} className="p-4 space-y-2">
+                      <div className="flex justify-between">
+                        <h4 className="font-light text-white">{newsletter.subject}</h4>
+                        <span className="text-sm text-gray-400">
+                          {formatDate(newsletter.sentAt || newsletter.scheduledFor)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-400">
+                        Sent to {newsletter.recipients} recipients
+                      </p>
+                      <div className="flex gap-4 text-sm">
+                        <span className="text-gray-300">Open Rate: {newsletter.stats?.openRate || 0}%</span>
+                        <span className="text-gray-300">Click Rate: {newsletter.stats?.clickRate || 0}%</span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-sm font-medium">Analytics Overview</h3>
-              <div className="bg-[#1e1f23] rounded-lg shadow-sm border border-[#2d2e33] p-4 space-y-6">
+              <h3 className="text-sm font-light">Analytics Overview</h3>
+              <div className="bg-[#111] rounded-lg border border-gray-800 p-4 space-y-6">
                 <div className="space-y-1">
-                  <p className="text-sm text-gray-400">Average Open Rate</p>
-                  <p className="text-2xl font-semibold text-white">68.3%</p>
+                  <p className="text-sm text-gray-400 font-light">Average Open Rate</p>
+                  <p className="text-2xl font-light">68.3%</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm text-gray-400">Average Click Rate</p>
-                  <p className="text-2xl font-semibold text-white">38.3%</p>
+                  <p className="text-sm text-gray-400 font-light">Average Click Rate</p>
+                  <p className="text-2xl font-light">38.3%</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm text-gray-400">Total Subscribers</p>
-                  <p className="text-2xl font-semibold text-white">{project.recipients}</p>
+                  <p className="text-sm text-gray-400 font-light">Total Subscribers</p>
+                  <p className="text-2xl font-light">{project.recipients}</p>
                 </div>
-                <Button variant="outline" className="w-full border-[#2d2e33] text-gray-300 hover:bg-[#2d2e33]">Download Report</Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
+                >
+                  Download Report
+                </Button>
               </div>
             </div>
           </div>
@@ -404,7 +424,7 @@ export default function ProjectPage() {
         <TabsContent value="scraping" className="space-y-4">
           <div className="flex justify-between items-center">
             <div className="space-y-1">
-              <h2 className="text-lg font-medium">Scraping Packages</h2>
+              <h2 className="text-lg font-light">Scraping Packages</h2>
               <p className="text-sm text-gray-400">
                 Manage and configure content scraping packages
               </p>
@@ -414,7 +434,7 @@ export default function ProjectPage() {
                 setSelectedPackage(null);
                 setShowPackageModal(true);
               }}
-              className="bg-[#e80566] hover:bg-[#c30552] text-white"
+              className="bg-white text-black hover:bg-gray-200 font-light"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Package
@@ -422,8 +442,8 @@ export default function ProjectPage() {
           </div>
 
           {packages.length === 0 ? (
-            <div className="text-center py-12 border border-dashed border-[#2d2e33] rounded-md bg-[#1e1f23]">
-              <h3 className="text-lg font-medium mb-2 text-white">No Scraping Packages Yet</h3>
+            <div className="text-center py-12 border border-dashed border-gray-800 rounded-md bg-[#111]">
+              <h3 className="text-lg font-light mb-2">No Scraping Packages Yet</h3>
               <p className="text-sm text-gray-400 mb-4">
                 Create a scraping package to automate content collection
               </p>
@@ -432,7 +452,7 @@ export default function ProjectPage() {
                   setSelectedPackage(null);
                   setShowPackageModal(true);
                 }}
-                className="bg-[#e80566] hover:bg-[#c30552] text-white"
+                className="bg-white text-black hover:bg-gray-200 font-light"
               >
                 Add Package
               </Button>
@@ -440,63 +460,63 @@ export default function ProjectPage() {
           ) : (
             <div className="grid gap-4">
               {packages.map((pkg) => (
-                <Card className="bg-[#1e1f23] border-[#2d2e33] text-white">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium text-white">{pkg.name}</h3>
-                          <Badge variant={pkg.status === "active" ? "default" : "secondary"} className={pkg.status === "active" ? "bg-[#e80566] text-white" : "bg-[#2d2e33] text-gray-300"}>
-                            {pkg.status}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-gray-400 mt-1">
-                          {pkg.description}
-                        </p>
-                        <div className="flex gap-4 text-sm mt-3">
-                          <span className="text-gray-400">
-                            Last run: {pkg.lastRun ? formatDate(pkg.lastRun) : "Never"}
-                          </span>
-                          <span className="text-gray-400">
-                            Next run: {formatDate(pkg.nextRun)}
-                          </span>
-                        </div>
+                <div key={pkg.id} className="bg-[#111] p-4 rounded border border-gray-800 hover:border-gray-700 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-light text-white">{pkg.name}</h3>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-light ${
+                          pkg.status === "active" ? "bg-green-900/30 text-green-400" : "bg-gray-800 text-gray-400"
+                        }`}>
+                          {pkg.status}
+                        </span>
                       </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleViewHistory(pkg)}
-                          className="border-[#2d2e33] text-white hover:bg-[#2d2e33] hover:text-white"
-                        >
-                          <History className="h-4 w-4 mr-2" />
-                          History
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleConfigurePackage(pkg)}
-                          className="border-[#2d2e33] text-white hover:bg-[#2d2e33] hover:text-white"
-                        >
-                          <Settings className="h-4 w-4 mr-2" />
-                          Configure
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            setSelectedPackage(pkg);
-                            setShowPackageModal(true);
-                          }}
-                          className="border-[#2d2e33] text-white hover:bg-[#2d2e33] hover:text-white"
-                        >
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </Button>
+                      <p className="text-sm text-gray-400 mt-1">
+                        {pkg.description}
+                      </p>
+                      <div className="flex gap-4 text-sm mt-3">
+                        <span className="text-gray-400">
+                          Last run: {pkg.lastRun ? formatDate(pkg.lastRun) : "Never"}
+                        </span>
+                        <span className="text-gray-400">
+                          Next run: {formatDate(pkg.nextRun)}
+                        </span>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleViewHistory(pkg)}
+                        className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
+                      >
+                        <History className="h-4 w-4 mr-2" />
+                        History
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleConfigurePackage(pkg)}
+                        className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
+                        Configure
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setSelectedPackage(pkg);
+                          setShowPackageModal(true);
+                        }}
+                        className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           )}
@@ -523,14 +543,14 @@ export default function ProjectPage() {
         <div className="space-y-6">
           <div 
             className={`border-2 border-dashed rounded-lg p-10 text-center ${
-              dragActive ? "border-[#e80566] bg-[#e80566]/5" : "border-[#2d2e33]"
-            } bg-[#1e1f23]`}
+              dragActive ? "border-gray-600 bg-gray-900/10" : "border-gray-800"
+            } bg-[#111]`}
             onDragEnter={handleDrag}
             onDragOver={handleDrag}
             onDragLeave={handleDrag}
             onDrop={handleDrop}
           >
-            <p className="text-gray-400 mb-2">Drag and drop your file here, or</p>
+            <p className="text-gray-400 mb-2 font-light">Drag and drop your file here, or</p>
             <input
               type="file"
               id="file-input"
@@ -541,7 +561,7 @@ export default function ProjectPage() {
             <label htmlFor="file-input">
               <Button 
                 as="span"
-                className="bg-[#e80566] hover:bg-[#c30552] text-white cursor-pointer"
+                className="bg-white text-black hover:bg-gray-200 font-light cursor-pointer"
               >
                 Browse Files
               </Button>
@@ -550,13 +570,13 @@ export default function ProjectPage() {
           </div>
 
           {uploadedFiles.length > 0 && (
-            <div className="border border-[#2d2e33] rounded-md divide-y divide-[#2d2e33] bg-[#1e1f23]">
+            <div className="border border-gray-800 rounded-md divide-y divide-gray-800 bg-[#111]">
               {uploadedFiles.map((file) => (
                 <div key={file.id} className="flex items-center justify-between p-3">
                   <div className="flex items-center">
                     <FileText className="h-5 w-5 mr-3 text-gray-400" />
                     <div>
-                      <p className="font-medium text-white">{file.name}</p>
+                      <p className="font-light text-white">{file.name}</p>
                       <p className="text-xs text-gray-400">{file.size}</p>
                     </div>
                   </div>
@@ -564,7 +584,7 @@ export default function ProjectPage() {
                     variant="ghost" 
                     size="sm" 
                     onClick={() => removeFile(file.id)}
-                    className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-[#2d2e33]"
+                    className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-gray-800"
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -580,14 +600,14 @@ export default function ProjectPage() {
                 setUploadedFiles([]);
                 setShowUploadModal(false);
               }}
-              className="border-[#2d2e33] text-gray-300 hover:bg-[#2d2e33]"
+              className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
             >
               Cancel
             </Button>
             <Button 
               disabled={uploadedFiles.length === 0}
               onClick={handleUploadDocument}
-              className="bg-[#e80566] hover:bg-[#c30552] text-white disabled:bg-[#2d2e33] disabled:text-gray-500"
+              className="bg-white text-black hover:bg-gray-200 font-light disabled:bg-gray-800 disabled:text-gray-500"
             >
               Upload
             </Button>

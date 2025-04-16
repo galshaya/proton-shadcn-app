@@ -68,41 +68,56 @@ export function ScrapingPackageConfigForm({ scrapingPackage, personas = [], onSu
     <form onSubmit={handleSubmit} className="space-y-6 text-white">
       <div className="space-y-4 mb-4">
         <div className="space-y-2">
-          <Label htmlFor="name" className="text-gray-300">Package Name</Label>
+          <Label htmlFor="name" className="text-gray-300 font-light">Package Name</Label>
           <Input
             id="name"
             placeholder="Enter package name"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             required
-            className="bg-[#1e1f23] border-[#2d2e33] text-white placeholder:text-gray-500 focus:border-[#e80566] focus:ring-0"
+            className="bg-[#111] border-gray-800 text-white placeholder:text-gray-500 focus:border-gray-700 focus:ring-0"
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="description" className="text-gray-300">Description</Label>
+          <Label htmlFor="description" className="text-gray-300 font-light">Description</Label>
           <Textarea
             id="description"
             placeholder="Enter package description"
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             required
-            className="bg-[#1e1f23] border-[#2d2e33] text-white placeholder:text-gray-500 focus:border-[#e80566] focus:ring-0"
+            className="bg-[#111] border-gray-800 text-white placeholder:text-gray-500 focus:border-gray-700 focus:ring-0"
           />
         </div>
       </div>
 
       <Tabs defaultValue="schedule" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-[#2d2e33]">
-          <TabsTrigger value="schedule" className="data-[state=active]:bg-[#e80566] data-[state=active]:text-white">Schedule</TabsTrigger>
-          <TabsTrigger value="filters" className="data-[state=active]:bg-[#e80566] data-[state=active]:text-white">Filters</TabsTrigger>
-          <TabsTrigger value="persona" className="data-[state=active]:bg-[#e80566] data-[state=active]:text-white">Persona</TabsTrigger>
+        <TabsList className="bg-transparent border-b border-gray-800 rounded-none w-full justify-start h-auto p-0">
+          <TabsTrigger 
+            value="schedule" 
+            className="rounded-none px-4 py-2 text-gray-400 data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-white font-light"
+          >
+            Schedule
+          </TabsTrigger>
+          <TabsTrigger 
+            value="filters" 
+            className="rounded-none px-4 py-2 text-gray-400 data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-white font-light"
+          >
+            Filters
+          </TabsTrigger>
+          <TabsTrigger 
+            value="persona" 
+            className="rounded-none px-4 py-2 text-gray-400 data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-white font-light"
+          >
+            Persona
+          </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="schedule" className="space-y-4">
+        <TabsContent value="schedule" className="space-y-4 pt-4">
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-gray-300">Frequency</Label>
+              <Label className="text-gray-300 font-light">Frequency</Label>
               <Select
                 value={formData.schedule.frequency}
                 onValueChange={(value) =>
@@ -112,19 +127,19 @@ export function ScrapingPackageConfigForm({ scrapingPackage, personas = [], onSu
                   })
                 }
               >
-                <SelectTrigger className="bg-[#1e1f23] border-[#2d2e33] text-white focus:ring-0 focus:border-[#e80566]">
+                <SelectTrigger className="bg-[#111] border-gray-800 text-white focus:ring-0 focus:border-gray-700">
                   <SelectValue placeholder="Select frequency" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1e1f23] border-[#2d2e33] text-white">
-                  <SelectItem value="daily" className="focus:bg-[#2d2e33] focus:text-white">Daily</SelectItem>
-                  <SelectItem value="weekly" className="focus:bg-[#2d2e33] focus:text-white">Weekly</SelectItem>
-                  <SelectItem value="monthly" className="focus:bg-[#2d2e33] focus:text-white">Monthly</SelectItem>
+                <SelectContent className="bg-[#111] border-gray-800 text-white">
+                  <SelectItem value="daily" className="focus:bg-gray-800 focus:text-white">Daily</SelectItem>
+                  <SelectItem value="weekly" className="focus:bg-gray-800 focus:text-white">Weekly</SelectItem>
+                  <SelectItem value="monthly" className="focus:bg-gray-800 focus:text-white">Monthly</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-gray-300">Time</Label>
+              <Label className="text-gray-300 font-light">Time</Label>
               <Input
                 type="time"
                 value={formData.schedule.time}
@@ -134,13 +149,13 @@ export function ScrapingPackageConfigForm({ scrapingPackage, personas = [], onSu
                     schedule: { ...formData.schedule, time: e.target.value },
                   })
                 }
-                className="bg-[#1e1f23] border-[#2d2e33] text-white focus:border-[#e80566] focus:ring-0"
+                className="bg-[#111] border-gray-800 text-white focus:border-gray-700 focus:ring-0"
               />
             </div>
 
             {formData.schedule.frequency === "weekly" && (
               <div className="space-y-2">
-                <Label className="text-gray-300">Days</Label>
+                <Label className="text-gray-300 font-light">Days</Label>
                 <div className="flex flex-wrap gap-2">
                   {["monday", "tuesday", "wednesday", "thursday", "friday"].map(
                     (day) => (
@@ -152,10 +167,10 @@ export function ScrapingPackageConfigForm({ scrapingPackage, personas = [], onSu
                             ? "default"
                             : "outline"
                         }
-                        className={`capitalize ${
+                        className={`capitalize font-light ${
                           formData.schedule.days.includes(day)
-                            ? "bg-[#e80566] hover:bg-[#c30552] text-white"
-                            : "border-[#2d2e33] text-gray-300 hover:bg-[#2d2e33] hover:text-white"
+                            ? "bg-white text-black hover:bg-gray-200"
+                            : "border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
                         }`}
                         onClick={() =>
                           setFormData({
@@ -179,13 +194,13 @@ export function ScrapingPackageConfigForm({ scrapingPackage, personas = [], onSu
 
             {formData.schedule.frequency === "monthly" && (
               <div className="space-y-2">
-                <Label className="text-gray-300">Date</Label>
+                <Label className="text-gray-300 font-light">Date</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       className={cn(
-                        "w-full justify-start text-left font-normal border-[#2d2e33] bg-[#1e1f23] text-white hover:bg-[#2d2e33]",
+                        "w-full justify-start text-left font-light border-gray-700 bg-[#111] text-white hover:bg-gray-800",
                         !formData.schedule.date && "text-gray-500"
                       )}
                     >
@@ -197,7 +212,7 @@ export function ScrapingPackageConfigForm({ scrapingPackage, personas = [], onSu
                       )}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 bg-[#1e1f23] border-[#2d2e33]">
+                  <PopoverContent className="w-auto p-0 bg-[#111] border-gray-800">
                     <Calendar
                       mode="single"
                       selected={formData.schedule.date}
@@ -208,7 +223,7 @@ export function ScrapingPackageConfigForm({ scrapingPackage, personas = [], onSu
                         })
                       }
                       initialFocus
-                      className="bg-[#1e1f23] text-white"
+                      className="bg-[#111] text-white"
                     />
                   </PopoverContent>
                 </Popover>
@@ -217,10 +232,10 @@ export function ScrapingPackageConfigForm({ scrapingPackage, personas = [], onSu
           </div>
         </TabsContent>
 
-        <TabsContent value="filters" className="space-y-4">
+        <TabsContent value="filters" className="space-y-4 pt-4">
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-gray-300">Keywords</Label>
+              <Label className="text-gray-300 font-light">Keywords</Label>
               <Textarea
                 placeholder="Enter keywords (one per line)"
                 value={formData.filters.keywords.join("\n")}
@@ -233,12 +248,12 @@ export function ScrapingPackageConfigForm({ scrapingPackage, personas = [], onSu
                     },
                   })
                 }
-                className="bg-[#1e1f23] border-[#2d2e33] text-white placeholder:text-gray-500 focus:border-[#e80566] focus:ring-0"
+                className="bg-[#111] border-gray-800 text-white placeholder:text-gray-500 focus:border-gray-700 focus:ring-0"
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-gray-300">Exclude Keywords</Label>
+              <Label className="text-gray-300 font-light">Exclude Keywords</Label>
               <Textarea
                 placeholder="Enter keywords to exclude (one per line)"
                 value={formData.filters.excludeKeywords.join("\n")}
@@ -251,13 +266,13 @@ export function ScrapingPackageConfigForm({ scrapingPackage, personas = [], onSu
                     },
                   })
                 }
-                className="bg-[#1e1f23] border-[#2d2e33] text-white placeholder:text-gray-500 focus:border-[#e80566] focus:ring-0"
+                className="bg-[#111] border-gray-800 text-white placeholder:text-gray-500 focus:border-gray-700 focus:ring-0"
               />
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-gray-300">Min Word Count</Label>
+                <Label className="text-gray-300 font-light">Min Word Count</Label>
                 <Input
                   type="number"
                   value={formData.filters.minWordCount}
@@ -270,11 +285,11 @@ export function ScrapingPackageConfigForm({ scrapingPackage, personas = [], onSu
                       },
                     })
                   }
-                  className="bg-[#1e1f23] border-[#2d2e33] text-white focus:border-[#e80566] focus:ring-0"
+                  className="bg-[#111] border-gray-800 text-white focus:border-gray-700 focus:ring-0"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-gray-300">Max Word Count</Label>
+                <Label className="text-gray-300 font-light">Max Word Count</Label>
                 <Input
                   type="number"
                   value={formData.filters.maxWordCount}
@@ -287,7 +302,7 @@ export function ScrapingPackageConfigForm({ scrapingPackage, personas = [], onSu
                       },
                     })
                   }
-                  className="bg-[#1e1f23] border-[#2d2e33] text-white focus:border-[#e80566] focus:ring-0"
+                  className="bg-[#111] border-gray-800 text-white focus:border-gray-700 focus:ring-0"
                 />
               </div>
             </div>
@@ -307,7 +322,7 @@ export function ScrapingPackageConfigForm({ scrapingPackage, personas = [], onSu
                     })
                   }
                 />
-                <Label htmlFor="include-images" className="text-gray-300">Include Images</Label>
+                <Label htmlFor="include-images" className="text-gray-300 font-light">Include Images</Label>
               </div>
             </div>
 
@@ -326,16 +341,16 @@ export function ScrapingPackageConfigForm({ scrapingPackage, personas = [], onSu
                     })
                   }
                 />
-                <Label htmlFor="include-pdf" className="text-gray-300">Include PDF Documents</Label>
+                <Label htmlFor="include-pdf" className="text-gray-300 font-light">Include PDF Documents</Label>
               </div>
             </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="persona" className="space-y-4">
+        <TabsContent value="persona" className="space-y-4 pt-4">
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-gray-300">Select Persona</Label>
+              <Label className="text-gray-300 font-light">Select Persona</Label>
               <Select
                 value={formData.personaId}
                 onValueChange={(value) =>
@@ -345,15 +360,15 @@ export function ScrapingPackageConfigForm({ scrapingPackage, personas = [], onSu
                   })
                 }
               >
-                <SelectTrigger className="bg-[#1e1f23] border-[#2d2e33] text-white focus:ring-0 focus:border-[#e80566]">
+                <SelectTrigger className="bg-[#111] border-gray-800 text-white focus:ring-0 focus:border-gray-700">
                   <SelectValue placeholder="Select a persona" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1e1f23] border-[#2d2e33] text-white">
+                <SelectContent className="bg-[#111] border-gray-800 text-white">
                   {personas.map((persona) => (
                     <SelectItem 
                       key={persona.id} 
                       value={persona.id}
-                      className="focus:bg-[#2d2e33] focus:text-white"
+                      className="focus:bg-gray-800 focus:text-white"
                     >
                       {persona.name}
                     </SelectItem>
@@ -363,7 +378,7 @@ export function ScrapingPackageConfigForm({ scrapingPackage, personas = [], onSu
             </div>
 
             <div className="space-y-2">
-              <Label className="text-gray-300">Status</Label>
+              <Label className="text-gray-300 font-light">Status</Label>
               <Select
                 value={formData.status}
                 onValueChange={(value) =>
@@ -373,25 +388,25 @@ export function ScrapingPackageConfigForm({ scrapingPackage, personas = [], onSu
                   })
                 }
               >
-                <SelectTrigger className="bg-[#1e1f23] border-[#2d2e33] text-white focus:ring-0 focus:border-[#e80566]">
+                <SelectTrigger className="bg-[#111] border-gray-800 text-white focus:ring-0 focus:border-gray-700">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1e1f23] border-[#2d2e33] text-white">
-                  <SelectItem value="active" className="focus:bg-[#2d2e33] focus:text-white">
+                <SelectContent className="bg-[#111] border-gray-800 text-white">
+                  <SelectItem value="active" className="focus:bg-gray-800 focus:text-white">
                     <div className="flex items-center">
-                      <Badge className="bg-green-500 mr-2">Active</Badge>
+                      <span className="inline-flex items-center w-3 h-3 mr-2 rounded-full bg-green-900/30 text-green-400"></span>
                       <span>Active</span>
                     </div>
                   </SelectItem>
-                  <SelectItem value="paused" className="focus:bg-[#2d2e33] focus:text-white">
+                  <SelectItem value="paused" className="focus:bg-gray-800 focus:text-white">
                     <div className="flex items-center">
-                      <Badge className="bg-yellow-500 mr-2">Paused</Badge>
+                      <span className="inline-flex items-center w-3 h-3 mr-2 rounded-full bg-yellow-900/30 text-yellow-400"></span>
                       <span>Paused</span>
                     </div>
                   </SelectItem>
-                  <SelectItem value="draft" className="focus:bg-[#2d2e33] focus:text-white">
+                  <SelectItem value="draft" className="focus:bg-gray-800 focus:text-white">
                     <div className="flex items-center">
-                      <Badge className="bg-gray-500 mr-2">Draft</Badge>
+                      <span className="inline-flex items-center w-3 h-3 mr-2 rounded-full bg-gray-800 text-gray-400"></span>
                       <span>Draft</span>
                     </div>
                   </SelectItem>
@@ -407,13 +422,13 @@ export function ScrapingPackageConfigForm({ scrapingPackage, personas = [], onSu
           type="button" 
           variant="outline" 
           onClick={onCancel}
-          className="border-[#2d2e33] text-gray-300 hover:bg-[#2d2e33] hover:text-white"
+          className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
         >
           Cancel
         </Button>
         <Button 
           type="submit"
-          className="bg-[#e80566] hover:bg-[#c30552] text-white"
+          className="bg-white text-black hover:bg-gray-200 font-light"
         >
           {scrapingPackage ? 'Update' : 'Create'} Package
         </Button>
