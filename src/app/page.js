@@ -1,6 +1,9 @@
+"use client"
+
 import Link from "next/link"
 import Image from "next/image"
 import { Card } from "@/components/ui/card"
+import { ApiStatus } from "@/components/api-status"
 
 // Mock data for demonstration
 const metrics = [
@@ -49,16 +52,23 @@ export default function Home() {
   return (
     <div>
       <div className="mb-12">
-        <Image 
-          src="/proton.svg" 
-          alt="Proton" 
-          width={240} 
-          height={72} 
-          className="mb-6"
-          priority
-        />
-        <h1 className="text-3xl font-light tracking-tight mb-2">AI Signal Intelligence</h1>
-        <p className="text-gray-400">Distinguishing signal from noise for strategic decision making</p>
+        <div className="flex justify-between items-start">
+          <div>
+            <Image
+              src="/proton.svg"
+              alt="Proton"
+              width={240}
+              height={72}
+              className="mb-6"
+              priority
+            />
+            <h1 className="text-3xl font-light tracking-tight mb-2">AI Signal Intelligence</h1>
+            <p className="text-gray-400">Distinguishing signal from noise for strategic decision making</p>
+          </div>
+          <div className="w-64">
+            <ApiStatus />
+          </div>
+        </div>
       </div>
       {/* // life is okay */}
       <div className="space-y-10">
@@ -102,12 +112,12 @@ export default function Home() {
               View All Projects
             </Link>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-[#111] p-6 rounded border border-gray-800 hover:border-gray-700 transition-colors">
               <h3 className="text-lg font-light mb-1">Advent Health</h3>
               <p className="text-sm text-gray-400 mb-6 font-light">Healthcare Innovation Monitoring</p>
-              
+
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-400 font-light">Last Updated</span>
@@ -123,11 +133,11 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-[#111] p-6 rounded border border-gray-800 hover:border-gray-700 transition-colors">
               <h3 className="text-lg font-light mb-1">Mars Pet Nutrition</h3>
               <p className="text-sm text-gray-400 mb-6 font-light">Pet Care Industry Intelligence</p>
-              
+
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-400 font-light">Last Updated</span>

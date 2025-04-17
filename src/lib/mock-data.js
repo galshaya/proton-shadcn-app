@@ -1,4 +1,5 @@
 // Mock data for the Proton CRM system
+import { scrapingPackagesApi, personasApi, newsletterApi, healthApi } from '@/lib/apiClient';
 
 export const mockProjects = [
   {
@@ -310,7 +311,7 @@ const scrapingPackages = [
   },
 ];
 
-// Mock API functions
+// API functions - combines real API with mock data for parts not yet implemented
 export const mockApi = {
   // Projects
   getProjects: () => Promise.resolve(mockProjects),
@@ -385,23 +386,117 @@ export const mockApi = {
     sentAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   }),
-  
-  // Scraping Packages
-  getScrapingPackages: () => Promise.resolve(mockScrapingPackages),
+
+  // Scraping Packages - using real API
+  getScrapingPackages: async () => {
+    try {
+      const packages = await scrapingPackagesApi.getAll();
+      // Transform API response to match expected format
+      return packages.map(pkg => ({
+        id: pkg._id,
+        name: pkg.name,
+        description: pkg.description,
+        status: pkg.status || 'active',
+        schedule: pkg.schedule || { frequency: 'daily', time: '09:00' },
+        lastRun: pkg.lastRun,
+        nextRun: pkg.nextRun,
+        createdAt: pkg.created_at,
+        updatedAt: pkg.updated_at,
+        itemsProcessed: pkg.itemsProcessed || 0,
+        sources: pkg.sources || []
+      }));
+    } catch (error) {
+      console.error('Error fetching scraping packages:', error);
+      // Fallback to mock data if API fails
+      return mockScrapingPackages;
+    }
+  },
   getProjectPackages: (projectId) => Promise.resolve(mockScrapingPackages.filter(p => p.projectId === projectId)),
-  createPackage: (data) => Promise.resolve({
-    id: "pkg_" + Math.random().toString(36).substring(2, 9),
-    ...data,
-    createdAt: new Date().toISOString(),
-    lastRun: null,
-    nextRun: null
-  }),
-  updatePackage: (id, data) => Promise.resolve({
-    id,
-    ...data,
-    updatedAt: new Date().toISOString()
-  }),
-  deletePackage: (id) => Promise.resolve({ success: true }),
+  createPackage: async (data) => {
+    try {
+      // Transform data to match API format
+      const apiData = {
+        name: data.name,
+        description: data.description,
+        status: data.status || 'active',
+        schedule: data.schedule || { frequency: 'daily', time: '09:00' },
+        sources: data.sources || [{ url: '', type: 'rss' }],
+        keywords: data.filters?.keywords || []
+      };
+
+      const response = await scrapingPackagesApi.create(apiData);
+
+      // Transform response to match expected format
+      return {
+        id: response._id,
+        name: response.name,
+        description: response.description,
+        status: response.status || 'active',
+        schedule: response.schedule,
+        lastRun: response.lastRun,
+        nextRun: response.nextRun,
+        createdAt: response.created_at,
+        updatedAt: response.updated_at,
+        itemsProcessed: response.itemsProcessed || 0
+      };
+    } catch (error) {
+      console.error('Error creating scraping package:', error);
+      // Fallback to mock implementation
+      return Promise.resolve({
+        id: "pkg_" + Math.random().toString(36).substring(2, 9),
+        ...data,
+        createdAt: new Date().toISOString(),
+        lastRun: null,
+        nextRun: null
+      });
+    }
+  },
+  updatePackage: async (id, data) => {
+    try {
+      // Transform data to match API format
+      const apiData = {
+        name: data.name,
+        description: data.description,
+        status: data.status,
+        schedule: data.schedule,
+        sources: data.sources,
+        keywords: data.filters?.keywords
+      };
+
+      const response = await scrapingPackagesApi.update(id, apiData);
+
+      // Transform response to match expected format
+      return {
+        id: response._id,
+        name: response.name,
+        description: response.description,
+        status: response.status,
+        schedule: response.schedule,
+        lastRun: response.lastRun,
+        nextRun: response.nextRun,
+        createdAt: response.created_at,
+        updatedAt: response.updated_at,
+        itemsProcessed: response.itemsProcessed || 0
+      };
+    } catch (error) {
+      console.error('Error updating scraping package:', error);
+      // Fallback to mock implementation
+      return Promise.resolve({
+        id,
+        ...data,
+        updatedAt: new Date().toISOString()
+      });
+    }
+  },
+  deletePackage: async (id) => {
+    try {
+      await scrapingPackagesApi.delete(id);
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting scraping package:', error);
+      return { success: false, error: error.message };
+    }
+  },
   runPackage: (id) => Promise.resolve({
     id,
     lastRun: new Date().toISOString(),
@@ -409,19 +504,97 @@ export const mockApi = {
     updatedAt: new Date().toISOString()
   }),
 
-  // Personas
-  getPersonas: () => Promise.resolve(mockPersonas),
-  createPersona: (data) => Promise.resolve({
-    id: "pers_" + Math.random().toString(36).substring(2, 9),
-    ...data,
-    createdAt: new Date().toISOString()
-  }),
-  updatePersona: (id, data) => Promise.resolve({
-    id,
-    ...data,
-    updatedAt: new Date().toISOString()
-  }),
-  deletePersona: (id) => Promise.resolve({ success: true }),
+  // Personas - using real API
+  getPersonas: async () => {
+    try {
+      const personas = await personasApi.getAll();
+      // Transform API response to match expected format
+      return personas.map(persona => ({
+        id: persona._id,
+        name: persona.name,
+        description: persona.description,
+        prompt: persona.prompt,
+        status: persona.status || 'active',
+        createdAt: persona.created_at,
+        email: persona.email || ''
+      }));
+    } catch (error) {
+      console.error('Error fetching personas:', error);
+      // Fallback to mock data if API fails
+      return mockPersonas;
+    }
+  },
+  createPersona: async (data) => {
+    try {
+      // Transform data to match API format
+      const apiData = {
+        name: data.name,
+        description: data.description,
+        prompt: data.prompt || 'Default prompt for this persona'
+      };
+
+      const response = await personasApi.create(apiData);
+
+      // Transform response to match expected format
+      return {
+        id: response._id,
+        name: response.name,
+        description: response.description,
+        prompt: response.prompt,
+        status: 'active',
+        createdAt: response.created_at
+      };
+    } catch (error) {
+      console.error('Error creating persona:', error);
+      // Fallback to mock implementation
+      return Promise.resolve({
+        id: "pers_" + Math.random().toString(36).substring(2, 9),
+        ...data,
+        createdAt: new Date().toISOString()
+      });
+    }
+  },
+  updatePersona: async (id, data) => {
+    try {
+      // Transform data to match API format
+      const apiData = {
+        name: data.name,
+        description: data.description,
+        prompt: data.prompt
+      };
+
+      const response = await personasApi.update(id, apiData);
+
+      // Transform response to match expected format
+      return {
+        id: response._id,
+        name: response.name,
+        description: response.description,
+        prompt: response.prompt,
+        status: response.status || 'active',
+        createdAt: response.created_at,
+        updatedAt: response.updated_at
+      };
+    } catch (error) {
+      console.error('Error updating persona:', error);
+      // Fallback to mock implementation
+      return Promise.resolve({
+        id,
+        ...data,
+        updatedAt: new Date().toISOString()
+      });
+    }
+  },
+  deletePersona: async (id) => {
+    try {
+      // Note: The API doesn't currently support deleting personas
+      // This is a placeholder for when that functionality is added
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting persona:', error);
+      return { success: false, error: error.message };
+    }
+  },
 
   // Recipients for scraping packages (not tied to a project)
   getRecipients: () => Promise.resolve(
@@ -441,4 +614,14 @@ export const mockApi = {
     updatedAt: new Date().toISOString()
   }),
   deleteRecipient: (id) => Promise.resolve({ success: true }),
-}; 
+
+  // Health check
+  checkHealth: async () => {
+    try {
+      return await healthApi.check();
+    } catch (error) {
+      console.error('Error checking API health:', error);
+      return { status: 'error', error: error.message };
+    }
+  }
+};

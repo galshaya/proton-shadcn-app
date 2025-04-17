@@ -26,6 +26,7 @@ export function PersonaForm({ persona, recipients = [], onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
     name: persona?.name || "",
     description: persona?.description || "",
+    prompt: persona?.prompt || "",
     selectedRecipients: persona?.recipients || [],
   })
 
@@ -77,6 +78,19 @@ export function PersonaForm({ persona, recipients = [], onSubmit, onCancel }) {
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             required
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="prompt">Prompt</Label>
+          <Textarea
+            id="prompt"
+            placeholder="Enter persona prompt for AI generation"
+            value={formData.prompt}
+            onChange={(e) => setFormData({ ...formData, prompt: e.target.value })}
+            required
+            rows={4}
+          />
+          <p className="text-xs text-gray-500">This prompt will guide the AI when generating content for this persona.</p>
         </div>
 
         <div className="space-y-4">
@@ -147,4 +161,4 @@ export function PersonaForm({ persona, recipients = [], onSubmit, onCancel }) {
       </div>
     </form>
   )
-} 
+}
