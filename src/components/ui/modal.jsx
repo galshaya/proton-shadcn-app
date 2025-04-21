@@ -35,7 +35,7 @@ export function Modal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
       <div
         className={cn(
-          "relative w-full max-w-md overflow-hidden rounded border border-gray-800 bg-[#111] shadow-lg",
+          "relative w-full max-w-lg overflow-hidden rounded border border-gray-800 bg-[#111] shadow-lg",
           className
         )}
       >
@@ -50,7 +50,7 @@ export function Modal({
             <X className="h-4 w-4" />
           </Button>
         </div>
-        <div className="p-4">{children}</div>
+        <div className="p-5">{children}</div>
         {footer && (
           <div className="flex justify-end gap-4 pt-4 border-t">
             {footer}
@@ -59,4 +59,4 @@ export function Modal({
       </div>
     </div>
   );
-} 
+}

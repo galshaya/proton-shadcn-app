@@ -398,12 +398,20 @@ export const mockApi = {
         description: pkg.description,
         status: pkg.status || 'active',
         schedule: pkg.schedule || { frequency: 'daily', time: '09:00' },
-        lastRun: pkg.lastRun,
-        nextRun: pkg.nextRun,
-        createdAt: pkg.created_at,
-        updatedAt: pkg.updated_at,
-        itemsProcessed: pkg.itemsProcessed || 0,
-        sources: pkg.sources || []
+        schedule_interval: pkg.schedule_interval || '1h',
+        max_articles_per_run: pkg.max_articles_per_run || 10,
+        calculate_embeddings: pkg.calculate_embeddings !== false,
+        extract_entities: pkg.extract_entities !== false,
+        summarize: pkg.summarize !== false,
+        lastRun: pkg.last_run,
+        nextRun: pkg.next_run,
+        createdAt: pkg.date_created || pkg.created_at || pkg.created_date,
+        updatedAt: pkg.date_updated || pkg.updated_at || pkg.updated_date,
+        itemsProcessed: pkg.articles_last_run || 0,
+        totalArticles: pkg.article_count || 0,
+        // Handle both sources and rss_feeds fields
+        sources: pkg.sources || pkg.rss_feeds || [],
+        stats: pkg.stats || {}
       }));
     } catch (error) {
       console.error('Error fetching scraping packages:', error);
@@ -414,17 +422,25 @@ export const mockApi = {
   getProjectPackages: (projectId) => Promise.resolve(mockScrapingPackages.filter(p => p.projectId === projectId)),
   createPackage: async (data) => {
     try {
+      console.log('Creating package with data:', data);
+
       // Transform data to match API format
       const apiData = {
         name: data.name,
         description: data.description,
         status: data.status || 'active',
-        schedule: data.schedule || { frequency: 'daily', time: '09:00' },
-        sources: data.sources || [{ url: '', type: 'rss' }],
+        schedule_interval: data.schedule_interval || '1h', // Add schedule_interval
+        max_articles_per_run: data.max_articles_per_run || 10, // Add max_articles_per_run
+        calculate_embeddings: data.calculate_embeddings !== false, // Default to true
+        extract_entities: data.extract_entities !== false, // Default to true
+        summarize: data.summarize !== false, // Default to true
+        rss_feeds: data.sources || [], // Use rss_feeds for compatibility with existing records
         keywords: data.filters?.keywords || []
       };
 
+      console.log('Sending API data:', apiData);
       const response = await scrapingPackagesApi.create(apiData);
+      console.log('API response:', response);
 
       // Transform response to match expected format
       return {
@@ -433,11 +449,20 @@ export const mockApi = {
         description: response.description,
         status: response.status || 'active',
         schedule: response.schedule,
-        lastRun: response.lastRun,
-        nextRun: response.nextRun,
-        createdAt: response.created_at,
-        updatedAt: response.updated_at,
-        itemsProcessed: response.itemsProcessed || 0
+        schedule_interval: response.schedule_interval || '1h',
+        max_articles_per_run: response.max_articles_per_run || 10,
+        calculate_embeddings: response.calculate_embeddings !== false,
+        extract_entities: response.extract_entities !== false,
+        summarize: response.summarize !== false,
+        lastRun: response.last_run,
+        nextRun: response.next_run,
+        createdAt: response.date_created || response.created_at || response.created_date,
+        updatedAt: response.date_updated || response.updated_at || response.updated_date,
+        itemsProcessed: response.articles_last_run || 0,
+        totalArticles: response.article_count || 0,
+        // Handle both sources and rss_feeds fields
+        sources: response.sources || response.rss_feeds || [],
+        stats: response.stats || {}
       };
     } catch (error) {
       console.error('Error creating scraping package:', error);
@@ -447,23 +472,33 @@ export const mockApi = {
         ...data,
         createdAt: new Date().toISOString(),
         lastRun: null,
-        nextRun: null
+        nextRun: null,
+        itemsProcessed: 0,
+        totalArticles: 0
       });
     }
   },
   updatePackage: async (id, data) => {
     try {
+      console.log('Updating package with ID:', id, 'Data:', data);
+
       // Transform data to match API format
       const apiData = {
         name: data.name,
         description: data.description,
         status: data.status,
-        schedule: data.schedule,
-        sources: data.sources,
+        schedule_interval: data.schedule_interval || '1h',
+        max_articles_per_run: data.max_articles_per_run || 10,
+        calculate_embeddings: data.calculate_embeddings !== false,
+        extract_entities: data.extract_entities !== false,
+        summarize: data.summarize !== false,
+        rss_feeds: data.sources, // Use rss_feeds for compatibility with existing records
         keywords: data.filters?.keywords
       };
 
+      console.log('Sending API data:', apiData);
       const response = await scrapingPackagesApi.update(id, apiData);
+      console.log('API response:', response);
 
       // Transform response to match expected format
       return {
@@ -472,11 +507,20 @@ export const mockApi = {
         description: response.description,
         status: response.status,
         schedule: response.schedule,
-        lastRun: response.lastRun,
-        nextRun: response.nextRun,
-        createdAt: response.created_at,
-        updatedAt: response.updated_at,
-        itemsProcessed: response.itemsProcessed || 0
+        schedule_interval: response.schedule_interval || '1h',
+        max_articles_per_run: response.max_articles_per_run || 10,
+        calculate_embeddings: response.calculate_embeddings !== false,
+        extract_entities: response.extract_entities !== false,
+        summarize: response.summarize !== false,
+        lastRun: response.last_run,
+        nextRun: response.next_run,
+        createdAt: response.date_created || response.created_at || response.created_date,
+        updatedAt: response.date_updated || response.updated_at || response.updated_date,
+        itemsProcessed: response.articles_last_run || 0,
+        totalArticles: response.article_count || 0,
+        // Handle both sources and rss_feeds fields
+        sources: response.sources || response.rss_feeds || [],
+        stats: response.stats || {}
       };
     } catch (error) {
       console.error('Error updating scraping package:', error);
@@ -490,18 +534,29 @@ export const mockApi = {
   },
   deletePackage: async (id) => {
     try {
-      await scrapingPackagesApi.delete(id);
-      return { success: true };
+      console.log('Deleting package with ID:', id);
+
+      // Call the API to delete the package
+      const response = await scrapingPackagesApi.delete(id);
+      console.log('Delete API response:', response);
+
+      return { success: true, message: 'Package deleted successfully' };
     } catch (error) {
       console.error('Error deleting scraping package:', error);
-      return { success: false, error: error.message };
+      throw error; // Rethrow the error to be handled by the caller
     }
   },
   runPackage: (id) => Promise.resolve({
     id,
     lastRun: new Date().toISOString(),
     nextRun: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    itemsProcessed: Math.floor(Math.random() * 50) + 10,
+    totalArticles: Math.floor(Math.random() * 500) + 100,
+    stats: {
+      last_run_duration: Math.random() * 15 + 5,
+      last_run_articles: Math.floor(Math.random() * 20) + 1
+    }
   }),
 
   // Personas - using real API

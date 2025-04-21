@@ -8,13 +8,12 @@ import { Modal } from "@/components/ui/modal"
 import { PersonaForm } from "@/components/forms/persona-form"
 import { RecipientForm } from "@/components/forms/recipient-form"
 import { ScrapingPackageConfigForm } from "@/components/forms/scraping-package-config-form"
-import { ScrapingPackageHistory } from "@/components/scraping-package-history"
-import { Plus, Settings, History, Edit, MoreHorizontal, Users, UserCircle, Trash, Search, RefreshCw, Calendar, Mail, Filter, Package } from "lucide-react"
+
+import { Plus, Settings, Edit, MoreHorizontal, Users, UserCircle, Trash, Search, Calendar, Mail, Filter, Package, Check, X, PlusCircle, Edit2, Eye, Clock, MailCheck } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
-import { mockApi } from "@/lib/mock-data"
+import { scrapingPackagesApi } from "@/lib/apiClient"
 import { Input } from "@/components/ui/input"
-import { PlusCircle, Edit2, Eye, Clock, MailCheck, Check, X } from "lucide-react"
 import { format, parseISO } from "date-fns"
 
 export default function ScrapingPackagesPage() {
@@ -23,7 +22,7 @@ export default function ScrapingPackagesPage() {
   const [showPersonaModal, setShowPersonaModal] = useState(false)
   const [showRecipientModal, setShowRecipientModal] = useState(false)
   const [showConfigureModal, setShowConfigureModal] = useState(false)
-  const [showHistoryModal, setShowHistoryModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [selectedPackage, setSelectedPackage] = useState(null)
   const [selectedPersona, setSelectedPersona] = useState(null)
   const [selectedRecipient, setSelectedRecipient] = useState(null)
@@ -41,11 +40,37 @@ export default function ScrapingPackagesPage() {
 
   const loadData = async () => {
     try {
-      const [packagesData, personasData, recipientsData] = await Promise.all([
-        mockApi.getScrapingPackages(),
-        mockApi.getPersonas(),
-        mockApi.getRecipients(),
-      ])
+      // Get packages directly from the API
+      const packagesResponse = await scrapingPackagesApi.getAll();
+
+      // Transform API response to match expected format
+      const packagesData = packagesResponse.map(pkg => ({
+        id: pkg._id,
+        name: pkg.name,
+        description: pkg.description,
+        status: pkg.status || 'active',
+        schedule_interval: pkg.schedule_interval || '1h',
+        max_articles_per_run: pkg.max_articles_per_run || 10,
+        calculate_embeddings: pkg.calculate_embeddings !== false,
+        extract_entities: pkg.extract_entities !== false,
+        summarize: pkg.summarize !== false,
+        lastRun: pkg.last_run,
+        nextRun: pkg.next_run,
+        createdAt: pkg.date_created || pkg.created_at || pkg.created_date,
+        updatedAt: pkg.date_updated || pkg.updated_at || pkg.updated_date,
+        itemsProcessed: pkg.articles_last_run || 0,
+        totalArticles: pkg.article_count || 0,
+        // Handle both sources and rss_feeds fields
+        sources: pkg.sources || pkg.rss_feeds || [],
+        stats: pkg.stats || {}
+      }));
+
+      // For now, still use mock data for personas and recipients
+      // In a real app, you would call the real APIs for these as well
+      const [personasData, recipientsData] = await Promise.all([
+        [], // Replace with real API call when available
+        [], // Replace with real API call when available
+      ]);
 
       setPackages(packagesData || [])
       setPersonas(personasData || [])
@@ -57,26 +82,116 @@ export default function ScrapingPackagesPage() {
     }
   }
 
-  const handleCreatePackage = (formData) => {
-    const newPackage = {
-      id: "pkg_" + Math.random().toString(36).substring(2, 9),
-      ...formData,
-      createdAt: new Date().toISOString(),
-      lastRun: null,
-      nextRun: formData.schedule?.date || null,
-      status: "active"
+  const handleCreatePackage = async (formData) => {
+    try {
+      setIsLoading(true)
+      console.log('Creating package with data:', formData);
+
+      // Transform data to match API format
+      const apiData = {
+        name: formData.name,
+        description: formData.description,
+        status: formData.status || 'active',
+        schedule_interval: formData.schedule_interval || '1h',
+        max_articles_per_run: formData.max_articles_per_run || 10,
+        calculate_embeddings: formData.calculate_embeddings !== false,
+        extract_entities: formData.extract_entities !== false,
+        summarize: formData.summarize !== false,
+        rss_feeds: formData.sources || [] // Use rss_feeds for compatibility with existing records
+      };
+
+      // Call the API directly
+      const response = await scrapingPackagesApi.create(apiData);
+      console.log('API response:', response);
+
+      // Transform response to match expected format
+      const newPackage = {
+        id: response._id,
+        name: response.name,
+        description: response.description,
+        status: response.status || 'active',
+        schedule_interval: response.schedule_interval || '1h',
+        max_articles_per_run: response.max_articles_per_run || 10,
+        calculate_embeddings: response.calculate_embeddings !== false,
+        extract_entities: response.extract_entities !== false,
+        summarize: response.summarize !== false,
+        lastRun: response.last_run,
+        nextRun: response.next_run,
+        createdAt: response.date_created || response.created_at || response.created_date,
+        updatedAt: response.date_updated || response.updated_at || response.updated_date,
+        itemsProcessed: response.articles_last_run || 0,
+        totalArticles: response.article_count || 0,
+        sources: response.sources || response.rss_feeds || [],
+        stats: response.stats || {}
+      };
+
+      // Update the local state with the new package
+      setPackages([...packages, newPackage])
+      setShowPackageModal(false)
+    } catch (error) {
+      console.error("Error creating package:", error)
+      alert(`Failed to create package: ${error.message}`)
+    } finally {
+      setIsLoading(false)
     }
-    setPackages([...packages, newPackage])
-    setShowPackageModal(false)
   }
 
-  const handleEditPackage = (formData) => {
-    const updatedPackages = packages.map((pkg) =>
-      pkg.id === selectedPackage.id ? { ...pkg, ...formData } : pkg
-    )
-    setPackages(updatedPackages)
-    setSelectedPackage(null)
-    setShowPackageModal(false)
+  const handleEditPackage = async (formData) => {
+    try {
+      setIsLoading(true)
+      console.log('Updating package with ID:', selectedPackage.id, 'Data:', formData);
+
+      // Transform data to match API format
+      const apiData = {
+        name: formData.name,
+        description: formData.description,
+        status: formData.status || 'active',
+        schedule_interval: formData.schedule_interval || '1h',
+        max_articles_per_run: formData.max_articles_per_run || 10,
+        calculate_embeddings: formData.calculate_embeddings !== false,
+        extract_entities: formData.extract_entities !== false,
+        summarize: formData.summarize !== false,
+        rss_feeds: formData.sources || [] // Use rss_feeds for compatibility with existing records
+      };
+
+      // Call the API directly
+      const response = await scrapingPackagesApi.update(selectedPackage.id, apiData);
+      console.log('API response:', response);
+
+      // Transform response to match expected format
+      const updatedPackage = {
+        id: response._id,
+        name: response.name,
+        description: response.description,
+        status: response.status || 'active',
+        schedule_interval: response.schedule_interval || '1h',
+        max_articles_per_run: response.max_articles_per_run || 10,
+        calculate_embeddings: response.calculate_embeddings !== false,
+        extract_entities: response.extract_entities !== false,
+        summarize: response.summarize !== false,
+        lastRun: response.last_run,
+        nextRun: response.next_run,
+        createdAt: response.date_created || response.created_at || response.created_date,
+        updatedAt: response.date_updated || response.updated_at || response.updated_date,
+        itemsProcessed: response.articles_last_run || 0,
+        totalArticles: response.article_count || 0,
+        sources: response.sources || response.rss_feeds || [],
+        stats: response.stats || {}
+      };
+
+      // Update the local state with the updated package
+      const updatedPackages = packages.map((pkg) =>
+        pkg.id === selectedPackage.id ? updatedPackage : pkg
+      )
+      setPackages(updatedPackages)
+      setSelectedPackage(null)
+      setShowPackageModal(false)
+    } catch (error) {
+      console.error("Error updating package:", error)
+      alert(`Failed to update package: ${error.message}`)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleCreatePersona = (formData) => {
@@ -118,14 +233,79 @@ export default function ScrapingPackagesPage() {
     setShowRecipientModal(false)
   }
 
-  const handleConfigurePackage = (pkg) => {
-    setSelectedPackage(pkg)
-    setShowConfigureModal(true)
+
+
+  const handleTogglePackageStatus = async (pkg) => {
+    try {
+      const newStatus = pkg.status === "active" ? "inactive" : "active"
+
+      // Optimistically update the UI
+      const updatedPackages = packages.map((p) =>
+        p.id === pkg.id ? { ...p, status: newStatus } : p
+      )
+      setPackages(updatedPackages)
+
+      // Prepare API data
+      const apiData = {
+        name: pkg.name,
+        description: pkg.description,
+        status: newStatus,
+        schedule_interval: pkg.schedule_interval || '1h',
+        max_articles_per_run: pkg.max_articles_per_run || 10,
+        calculate_embeddings: pkg.calculate_embeddings !== false,
+        extract_entities: pkg.extract_entities !== false,
+        summarize: pkg.summarize !== false,
+        rss_feeds: pkg.sources || [] // Use rss_feeds for compatibility with existing records
+      };
+
+      // Call the API directly
+      await scrapingPackagesApi.update(pkg.id, apiData);
+    } catch (error) {
+      console.error("Error toggling package status:", error)
+      alert(`Failed to update package status: ${error.message}`)
+
+      // Revert the optimistic update on error
+      setPackages(packages)
+      // Reload the data to ensure UI is in sync with server
+      loadData()
+    }
   }
 
-  const handleViewHistory = (pkg) => {
+  const handleDeletePackage = (pkg) => {
+    // Set the selected package and show the delete confirmation modal
+    setSelectedPackage(pkg);
+    setShowDeleteModal(true);
+  }
+
+  const confirmDeletePackage = async () => {
+    try {
+      setIsLoading(true);
+      console.log('Deleting package with ID:', selectedPackage.id);
+
+      // Call the API directly to delete the package
+      await scrapingPackagesApi.delete(selectedPackage.id);
+
+      // Remove the package from the local state
+      const updatedPackages = packages.filter(p => p.id !== selectedPackage.id);
+      setPackages(updatedPackages);
+
+      // Close the modal and clear the selected package
+      setShowDeleteModal(false);
+      setSelectedPackage(null);
+
+      // Show success message
+      alert(`Package deleted successfully.`);
+    } catch (error) {
+      console.error("Error deleting package:", error);
+      alert(`Failed to delete package: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const handleConfigurePackage = (pkg) => {
     setSelectedPackage(pkg)
-    setShowHistoryModal(true)
+    setShowPackageModal(true)
   }
 
   const handleManageRecipients = (persona) => {
@@ -140,23 +320,24 @@ export default function ScrapingPackagesPage() {
   const formatDate = (dateString) => {
     if (!dateString) return "Not scheduled"
     try {
+      // Handle both ISO format and the API's date format
       return format(parseISO(dateString), "MMM d, yyyy h:mm a")
     } catch (error) {
-      console.error("Error formatting date:", error)
+      console.error("Error formatting date:", error, dateString)
       return "Invalid Date"
     }
   }
 
-  const filteredPackages = packages.filter(pkg => 
+  const filteredPackages = packages.filter(pkg =>
     pkg.name.toLowerCase().includes(packageSearch.toLowerCase())
   )
 
-  const filteredPersonas = personas.filter(persona => 
+  const filteredPersonas = personas.filter(persona =>
     persona.name.toLowerCase().includes(personaSearch.toLowerCase())
   )
 
-  const filteredRecipients = recipients.filter(recipient => 
-    recipient.name.toLowerCase().includes(recipientSearch.toLowerCase()) || 
+  const filteredRecipients = recipients.filter(recipient =>
+    recipient.name.toLowerCase().includes(recipientSearch.toLowerCase()) ||
     recipient.email.toLowerCase().includes(recipientSearch.toLowerCase()) ||
     (recipient.company && recipient.company.toLowerCase().includes(recipientSearch.toLowerCase()))
   )
@@ -171,20 +352,20 @@ export default function ScrapingPackagesPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="bg-transparent border-b border-gray-800 rounded-none w-full justify-start h-auto p-0">
-          <TabsTrigger 
-            value="packages" 
+          <TabsTrigger
+            value="packages"
             className="rounded-none px-4 py-2 text-gray-400 data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-white font-light"
           >
             Scraping Packages
           </TabsTrigger>
-          <TabsTrigger 
-            value="personas" 
+          <TabsTrigger
+            value="personas"
             className="rounded-none px-4 py-2 text-gray-400 data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-white font-light"
           >
             Personas
           </TabsTrigger>
-          <TabsTrigger 
-            value="recipients" 
+          <TabsTrigger
+            value="recipients"
             className="rounded-none px-4 py-2 text-gray-400 data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-white font-light"
           >
             Recipients
@@ -202,16 +383,18 @@ export default function ScrapingPackagesPage() {
                 onChange={(e) => setPackageSearch(e.target.value)}
               />
             </div>
-            <Button
-              onClick={() => {
-                setSelectedPackage(null)
-                setShowPackageModal(true)
-              }}
-              className="bg-white text-black hover:bg-gray-200 font-light"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Package
-            </Button>
+            <div>
+              <Button
+                onClick={() => {
+                  setSelectedPackage(null)
+                  setShowPackageModal(true)
+                }}
+                className="bg-white text-black hover:bg-gray-200 font-light"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Package
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
@@ -222,8 +405,8 @@ export default function ScrapingPackagesPage() {
                 <p className="text-sm text-gray-400 mb-4">
                   Create your first scraping package to get started
                 </p>
-                <Button 
-                  onClick={() => setShowPackageModal(true)} 
+                <Button
+                  onClick={() => setShowPackageModal(true)}
                   className="bg-white text-black hover:bg-gray-200 font-light"
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -232,11 +415,11 @@ export default function ScrapingPackagesPage() {
               </div>
             ) : (
               filteredPackages.map((pkg) => (
-                <div key={pkg.id} className="bg-[#111] p-4 rounded border border-gray-800 hover:border-gray-700 transition-colors">
+                <div key={pkg.id} className="bg-[#111] p-5 rounded border border-gray-800 hover:border-gray-700 transition-colors relative">
                   <div className="mb-4">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="font-light text-white">{pkg.name}</h3>
+                        <h3 className="font-medium text-white text-lg">{pkg.name}</h3>
                         <p className="text-sm text-gray-400">
                           {pkg.description}
                         </p>
@@ -248,6 +431,28 @@ export default function ScrapingPackagesPage() {
                       </span>
                     </div>
                   </div>
+
+                  {/* RSS Feeds Section */}
+                  {pkg.sources && pkg.sources.length > 0 && (
+                    <div className="mb-4">
+                      <h4 className="text-xs uppercase text-gray-500 mb-2">RSS FEEDS</h4>
+                      <div className="max-h-32 overflow-y-auto pr-1 space-y-1.5">
+                        {pkg.sources.map((source, idx) => (
+                          <div key={idx} className="bg-[#1a1a1a] rounded p-1.5 text-xs">
+                            {source.name ? (
+                              <div className="flex flex-col">
+                                <span className="font-medium text-white truncate">{source.name}</span>
+                                <span className="text-gray-400 truncate">{source.url}</span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-300 truncate">{source.url || 'Unnamed Feed'}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-2 text-sm mb-4">
                     <div className="flex justify-between">
                       <span className="text-gray-400">Last run:</span>
@@ -259,28 +464,54 @@ export default function ScrapingPackagesPage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Items processed:</span>
-                      <span className="text-gray-300">{pkg.itemsProcessed}</span>
+                      <span className="text-gray-300">{pkg.itemsProcessed || 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Total articles:</span>
+                      <span className="text-gray-300">{pkg.totalArticles || 0}</span>
                     </div>
                   </div>
-                  <div className="flex justify-between border-t border-gray-800 pt-4">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleViewHistory(pkg)}
-                      className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
-                    >
-                      <History className="h-4 w-4 mr-2" />
-                      History
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleEditPackage(pkg)}
-                      className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
-                    >
-                      <Settings className="h-4 w-4 mr-2" />
-                      Configure
-                    </Button>
+                  <div className="border-t border-gray-800 pt-4 space-y-2">
+                    <div className="flex space-x-2 w-full">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleTogglePackageStatus(pkg)}
+                        className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light flex-1 py-1.5"
+                      >
+                        {pkg.status === "active" ? (
+                          <>
+                            <X className="h-4 w-4 mr-2" />
+                            Deactivate
+                          </>
+                        ) : (
+                          <>
+                            <Check className="h-4 w-4 mr-2" />
+                            Activate
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleConfigurePackage(pkg)}
+                        className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light flex-1 py-1.5"
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
+                        Configure
+                      </Button>
+                    </div>
+                    <div className="flex space-x-2 w-full">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeletePackage(pkg)}
+                        className="border-gray-700 text-gray-300 hover:bg-red-900 hover:text-white font-light w-full py-1.5"
+                      >
+                        <Trash className="h-4 w-4 mr-2" />
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -319,7 +550,7 @@ export default function ScrapingPackagesPage() {
                 <p className="text-sm text-gray-400 mb-4">
                   Create your first persona to get started
                 </p>
-                <Button 
+                <Button
                   onClick={() => {
                     setSelectedPersona(null)
                     setShowPersonaModal(true)
@@ -357,18 +588,18 @@ export default function ScrapingPackagesPage() {
                       </div>
                     </div>
                     <div className="flex justify-between border-t border-gray-800 pt-4">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleManageRecipients(persona)}
                         className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
                       >
                         <Users className="h-4 w-4 mr-2" />
                         Recipients
                       </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleEditPersona(persona)}
                         className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
                       >
@@ -414,7 +645,7 @@ export default function ScrapingPackagesPage() {
                 <p className="text-sm text-gray-400 mb-4">
                   Add recipients to manage your audience
                 </p>
-                <Button 
+                <Button
                   onClick={() => {
                     setSelectedRecipient(null)
                     setShowRecipientModal(true)
@@ -463,19 +694,25 @@ export default function ScrapingPackagesPage() {
 
       {showPackageModal && (
         <Modal
-          title={selectedPackage ? "Edit Package" : "New Package"}
+          title={selectedPackage ? `Edit ${selectedPackage.name}` : "New Package"}
           isOpen={showPackageModal}
           onClose={() => setShowPackageModal(false)}
         >
+          {isLoading && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50 rounded">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+            </div>
+          )}
           <ScrapingPackageConfigForm
-            package={selectedPackage}
+            scrapingPackage={selectedPackage}
             onSubmit={(pkg) => {
               if (selectedPackage) {
                 handleEditPackage(pkg)
               } else {
                 handleCreatePackage(pkg)
               }
-              setShowPackageModal(false)
+              // Don't close the modal immediately, wait for the API call to complete
+              // setShowPackageModal(false) will be called after the API call completes
             }}
             onCancel={() => setShowPackageModal(false)}
           />
@@ -508,18 +745,7 @@ export default function ScrapingPackagesPage() {
         </Modal>
       )}
 
-      {showHistoryModal && selectedPackage && (
-        <Modal
-          title={`History - ${selectedPackage.name}`}
-          isOpen={showHistoryModal}
-          onClose={() => setShowHistoryModal(false)}
-        >
-          <ScrapingPackageHistory
-            packageId={selectedPackage.id}
-            onClose={() => setShowHistoryModal(false)}
-          />
-        </Modal>
-      )}
+
 
       {showRecipientModal && selectedRecipient && (
         <Modal
@@ -532,8 +758,8 @@ export default function ScrapingPackagesPage() {
               <label htmlFor="name" className="text-sm font-light">
                 Name
               </label>
-              <Input 
-                id="name" 
+              <Input
+                id="name"
                 placeholder="Enter recipient name"
                 defaultValue={selectedRecipient.name}
                 className="bg-[#111] border-gray-800 text-white"
@@ -543,8 +769,8 @@ export default function ScrapingPackagesPage() {
               <label htmlFor="email" className="text-sm font-light">
                 Email
               </label>
-              <Input 
-                id="email" 
+              <Input
+                id="email"
                 type="email"
                 placeholder="Enter recipient email"
                 defaultValue={selectedRecipient.email}
@@ -564,17 +790,17 @@ export default function ScrapingPackagesPage() {
                 </span>
               </div>
             </div>
-            
+
             <div className="flex justify-end space-x-2 pt-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setShowRecipientModal(false)}
                 className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
               >
                 <X className="h-4 w-4 mr-2" />
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={() => {
                   const updatedRecipient = {
                     ...selectedRecipient,
@@ -593,6 +819,47 @@ export default function ScrapingPackagesPage() {
           </div>
         </Modal>
       )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && selectedPackage && (
+        <Modal
+          title="Confirm Delete"
+          isOpen={showDeleteModal}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setSelectedPackage(null);
+          }}
+        >
+          <div className="space-y-4 py-2 pb-4">
+            <p className="text-white">
+              Are you sure you want to delete the package <span className="font-semibold">"{selectedPackage.name}"</span>?
+            </p>
+            <p className="text-gray-400 text-sm">
+              This action cannot be undone. All associated data will be permanently removed.
+            </p>
+
+            <div className="flex justify-end space-x-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setSelectedPackage(null);
+                }}
+                className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmDeletePackage}
+                className="bg-red-600 hover:bg-red-700 text-white font-light"
+              >
+                <Trash className="h-4 w-4 mr-2" />
+                Delete Package
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   )
-} 
+}

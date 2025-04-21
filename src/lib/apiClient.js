@@ -1,6 +1,6 @@
 /**
  * Proton API Client
- * 
+ *
  * This module provides functions for interacting with the Proton API.
  */
 
@@ -15,27 +15,44 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
  */
 async function apiRequest(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
-  
+
   // Set default headers
   const headers = {
     'Content-Type': 'application/json',
     ...options.headers,
   };
-  
+
   try {
+    console.log(`Making ${options.method || 'GET'} request to ${url}`);
+    if (options.body) {
+      console.log('Request body:', options.body);
+    }
+
     const response = await fetch(url, {
       ...options,
       headers,
     });
-    
-    // Parse response
-    const data = await response.json();
-    
+
+    // Try to parse response as JSON
+    let data;
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      // If not JSON, get text
+      const text = await response.text();
+      console.log('Non-JSON response:', text);
+      data = { message: text };
+    }
+
+    console.log('Response status:', response.status);
+    console.log('Response data:', data);
+
     // Check for error response
     if (!response.ok) {
-      throw new Error(data.error || `API error: ${response.status}`);
+      throw new Error(data.error || data.message || `API error: ${response.status}`);
     }
-    
+
     return data;
   } catch (error) {
     console.error(`API request failed: ${error.message}`);
@@ -52,43 +69,58 @@ export const scrapingPackagesApi = {
    * @returns {Promise<Array>} - List of scraping packages
    */
   getAll: () => apiRequest('/api/scraping-packages'),
-  
+
   /**
    * Get a specific scraping package
    * @param {string} id - Package ID
    * @returns {Promise<Object>} - Scraping package
    */
   getById: (id) => apiRequest(`/api/scraping-packages/${id}`),
-  
+
   /**
    * Create a new scraping package
    * @param {Object} data - Package data
    * @returns {Promise<Object>} - Created package
    */
-  create: (data) => apiRequest('/api/scraping-packages', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
-  
+  create: (data) => {
+    // Log the data being sent
+    console.log('Creating package with data:', data);
+
+    return apiRequest('/api/scraping-packages', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   /**
    * Update a scraping package
    * @param {string} id - Package ID
    * @param {Object} data - Package data
    * @returns {Promise<Object>} - Updated package
    */
-  update: (id, data) => apiRequest(`/api/scraping-packages/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  }),
-  
+  update: (id, data) => {
+    // Log the data being sent
+    console.log(`Updating package ${id} with data:`, data);
+
+    return apiRequest(`/api/scraping-packages/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
   /**
    * Delete a scraping package
    * @param {string} id - Package ID
    * @returns {Promise<Object>} - Response
    */
-  delete: (id) => apiRequest(`/api/scraping-packages/${id}`, {
-    method: 'DELETE',
-  }),
+  delete: (id) => {
+    // Log the delete operation
+    console.log(`Deleting package ${id}`);
+
+    return apiRequest(`/api/scraping-packages/${id}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 /**
@@ -100,14 +132,14 @@ export const personasApi = {
    * @returns {Promise<Array>} - List of personas
    */
   getAll: () => apiRequest('/api/personas'),
-  
+
   /**
    * Get a specific persona
    * @param {string} id - Persona ID
    * @returns {Promise<Object>} - Persona
    */
   getById: (id) => apiRequest(`/api/personas/${id}`),
-  
+
   /**
    * Create a new persona
    * @param {Object} data - Persona data
@@ -117,7 +149,7 @@ export const personasApi = {
     method: 'POST',
     body: JSON.stringify(data),
   }),
-  
+
   /**
    * Update a persona
    * @param {string} id - Persona ID

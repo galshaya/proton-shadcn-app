@@ -5,63 +5,66 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
-import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { Calendar as CalendarIcon, Check } from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
+import { X, Plus, Trash } from "lucide-react";
 
-export function ScrapingPackageConfigForm({ scrapingPackage, personas = [], onSubmit, onCancel }) {
+export function ScrapingPackageConfigForm({ scrapingPackage, initialData, onSubmit, onCancel }) {
+  // Use either scrapingPackage or initialData (for backward compatibility)
+  const packageData = scrapingPackage || initialData || {};
+
   const [formData, setFormData] = useState({
-    name: scrapingPackage?.name || "",
-    description: scrapingPackage?.description || "",
-    schedule: {
-      frequency: scrapingPackage?.schedule?.frequency || "daily",
-      time: scrapingPackage?.schedule?.time || "09:00",
-      days: scrapingPackage?.schedule?.days || ["monday", "wednesday", "friday"],
-      date: scrapingPackage?.schedule?.date || new Date(),
-    },
-    filters: {
-      keywords: scrapingPackage?.filters?.keywords || [],
-      excludeKeywords: scrapingPackage?.filters?.excludeKeywords || [],
-      minWordCount: scrapingPackage?.filters?.minWordCount || 100,
-      maxWordCount: scrapingPackage?.filters?.maxWordCount || 1000,
-      includeImages: scrapingPackage?.filters?.includeImages || true,
-      includePDF: scrapingPackage?.filters?.includePDF || false,
-    },
-    personaId: scrapingPackage?.personaId || "",
-    status: scrapingPackage?.status || "active",
+    name: packageData.name || "",
+    description: packageData.description || "",
+    status: packageData.status || "active",
+    sources: packageData.sources || [],
+    schedule_interval: packageData.schedule_interval || "1h",
+    max_articles_per_run: packageData.max_articles_per_run || 10,
+    calculate_embeddings: packageData.calculate_embeddings !== false,
+    extract_entities: packageData.extract_entities !== false,
+    summarize: packageData.summarize !== false
   });
+
+  // Log the initial data for debugging
+  console.log('ScrapingPackageConfigForm initialData:', { scrapingPackage, initialData, formData });
+
+  const [newSource, setNewSource] = useState({ name: "", url: "" });
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+
+    // Format the sources to match the API's expected format
+    const formattedData = {
+      ...formData,
+      // Ensure each source has a type field set to 'rss'
+      sources: formData.sources.map(source => ({
+        name: source.name || '',
+        url: source.url,
+        type: source.type || 'rss'
+      }))
+    };
+
+    console.log('Submitting form data:', formattedData);
+    onSubmit(formattedData);
+  };
+
+  const handleAddSource = () => {
+    if (newSource.url) { // Only require URL, name can be optional
+      setFormData({
+        ...formData,
+        sources: [...formData.sources, {
+          name: newSource.name.trim() || '', // Allow empty name
+          url: newSource.url.trim(),
+          type: 'rss' // Always set the type to 'rss'
+        }]
+      });
+      setNewSource({ name: "", url: "" });
+    }
+  };
+
+  const handleRemoveSource = (index) => {
+    setFormData({
+      ...formData,
+      sources: formData.sources.filter((_, i) => i !== index)
+    });
   };
 
   return (
@@ -86,347 +89,171 @@ export function ScrapingPackageConfigForm({ scrapingPackage, personas = [], onSu
             placeholder="Enter package description"
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            required
             className="bg-[#111] border-gray-800 text-white placeholder:text-gray-500 focus:border-gray-700 focus:ring-0"
           />
         </div>
-      </div>
 
-      <Tabs defaultValue="schedule" className="w-full">
-        <TabsList className="bg-transparent border-b border-gray-800 rounded-none w-full justify-start h-auto p-0">
-          <TabsTrigger 
-            value="schedule" 
-            className="rounded-none px-4 py-2 text-gray-400 data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-white font-light"
-          >
-            Schedule
-          </TabsTrigger>
-          <TabsTrigger 
-            value="filters" 
-            className="rounded-none px-4 py-2 text-gray-400 data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-white font-light"
-          >
-            Filters
-          </TabsTrigger>
-          <TabsTrigger 
-            value="persona" 
-            className="rounded-none px-4 py-2 text-gray-400 data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-white font-light"
-          >
-            Persona
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="schedule" className="space-y-4 pt-4">
-          <div className="space-y-4">
+        {/* Advanced Settings */}
+        <div className="space-y-4 mt-6 border-t border-gray-800 pt-4">
+          <h3 className="text-sm font-medium text-gray-300">Advanced Settings</h3>
+
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-gray-300 font-light">Frequency</Label>
-              <Select
-                value={formData.schedule.frequency}
-                onValueChange={(value) =>
-                  setFormData({
-                    ...formData,
-                    schedule: { ...formData.schedule, frequency: value },
-                  })
-                }
+              <Label htmlFor="schedule_interval" className="text-gray-300 font-light">Schedule Interval</Label>
+              <select
+                id="schedule_interval"
+                value={formData.schedule_interval}
+                onChange={(e) => setFormData({ ...formData, schedule_interval: e.target.value })}
+                className="w-full bg-[#111] border border-gray-800 rounded p-2 text-white"
               >
-                <SelectTrigger className="bg-[#111] border-gray-800 text-white focus:ring-0 focus:border-gray-700">
-                  <SelectValue placeholder="Select frequency" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#111] border-gray-800 text-white">
-                  <SelectItem value="daily" className="focus:bg-gray-800 focus:text-white">Daily</SelectItem>
-                  <SelectItem value="weekly" className="focus:bg-gray-800 focus:text-white">Weekly</SelectItem>
-                  <SelectItem value="monthly" className="focus:bg-gray-800 focus:text-white">Monthly</SelectItem>
-                </SelectContent>
-              </Select>
+                <option value="15m">Every 15 minutes</option>
+                <option value="30m">Every 30 minutes</option>
+                <option value="1h">Every hour</option>
+                <option value="2h">Every 2 hours</option>
+                <option value="4h">Every 4 hours</option>
+                <option value="6h">Every 6 hours</option>
+                <option value="12h">Every 12 hours</option>
+                <option value="24h">Every 24 hours</option>
+              </select>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-gray-300 font-light">Time</Label>
+              <Label htmlFor="max_articles_per_run" className="text-gray-300 font-light">Max Articles Per Run</Label>
               <Input
-                type="time"
-                value={formData.schedule.time}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    schedule: { ...formData.schedule, time: e.target.value },
-                  })
-                }
-                className="bg-[#111] border-gray-800 text-white focus:border-gray-700 focus:ring-0"
+                id="max_articles_per_run"
+                type="number"
+                min="1"
+                max="100"
+                value={formData.max_articles_per_run}
+                onChange={(e) => setFormData({ ...formData, max_articles_per_run: parseInt(e.target.value) })}
+                className="bg-[#111] border-gray-800 text-white placeholder:text-gray-500 focus:border-gray-700 focus:ring-0"
               />
             </div>
+          </div>
 
-            {formData.schedule.frequency === "weekly" && (
+          <div className="space-y-2 mt-4">
+            <Label className="text-gray-300 font-light">Processing Options</Label>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="calculate_embeddings"
+                  checked={formData.calculate_embeddings}
+                  onChange={(e) => setFormData({ ...formData, calculate_embeddings: e.target.checked })}
+                  className="rounded border-gray-700 bg-[#111] text-white"
+                />
+                <Label htmlFor="calculate_embeddings" className="text-sm text-gray-300 cursor-pointer">Calculate Embeddings</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="extract_entities"
+                  checked={formData.extract_entities}
+                  onChange={(e) => setFormData({ ...formData, extract_entities: e.target.checked })}
+                  className="rounded border-gray-700 bg-[#111] text-white"
+                />
+                <Label htmlFor="extract_entities" className="text-sm text-gray-300 cursor-pointer">Extract Entities</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="summarize"
+                  checked={formData.summarize}
+                  onChange={(e) => setFormData({ ...formData, summarize: e.target.checked })}
+                  className="rounded border-gray-700 bg-[#111] text-white"
+                />
+                <Label htmlFor="summarize" className="text-sm text-gray-300 cursor-pointer">Summarize</Label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4 mt-6">
+          <Label className="text-gray-300 font-light">RSS Feeds</Label>
+
+          {formData.sources.length > 0 ? (
+            <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+              {formData.sources.map((source, index) => (
+                <div key={index} className="flex items-center space-x-2 p-3 bg-[#1a1a1a] rounded border border-gray-800">
+                  <div className="flex-1 min-w-0"> {/* min-width: 0 helps with text truncation */}
+                    <p className="text-sm font-medium text-white truncate">
+                      {source.name || 'Unnamed Feed'}
+                    </p>
+                    <p className="text-xs text-gray-400 truncate">
+                      {source.url || 'No URL provided'}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveSource(index)}
+                    className="h-8 w-8 p-0 flex-shrink-0 text-gray-400 hover:text-white hover:bg-gray-800"
+                  >
+                    <Trash className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center p-4 border border-dashed border-gray-800 rounded">
+              <p className="text-sm text-gray-400">No RSS feeds added yet</p>
+            </div>
+          )}
+
+          <div className="space-y-4 mt-4 border-t border-gray-800 pt-4">
+            <h4 className="text-sm font-medium text-gray-300">Add New Feed</h4>
+            <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
-                <Label className="text-gray-300 font-light">Days</Label>
-                <div className="flex flex-wrap gap-2">
-                  {["monday", "tuesday", "wednesday", "thursday", "friday"].map(
-                    (day) => (
-                      <Button
-                        key={day}
-                        type="button"
-                        variant={
-                          formData.schedule.days.includes(day)
-                            ? "default"
-                            : "outline"
-                        }
-                        className={`capitalize font-light ${
-                          formData.schedule.days.includes(day)
-                            ? "bg-white text-black hover:bg-gray-200"
-                            : "border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
-                        }`}
-                        onClick={() =>
-                          setFormData({
-                            ...formData,
-                            schedule: {
-                              ...formData.schedule,
-                              days: formData.schedule.days.includes(day)
-                                ? formData.schedule.days.filter((d) => d !== day)
-                                : [...formData.schedule.days, day],
-                            },
-                          })
-                        }
-                      >
-                        {day}
-                      </Button>
-                    )
-                  )}
+                <Label htmlFor="sourceName" className="text-xs text-gray-400">Feed Name</Label>
+                <Input
+                  id="sourceName"
+                  placeholder="e.g., TechCrunch"
+                  value={newSource.name}
+                  onChange={(e) => setNewSource({ ...newSource, name: e.target.value })}
+                  className="bg-[#111] border-gray-800 text-white placeholder:text-gray-500 focus:border-gray-700 focus:ring-0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sourceUrl" className="text-xs text-gray-400">Feed URL</Label>
+                <div className="flex space-x-2">
+                  <Input
+                    id="sourceUrl"
+                    placeholder="https://example.com/rss"
+                    value={newSource.url}
+                    onChange={(e) => setNewSource({ ...newSource, url: e.target.value })}
+                    className="flex-1 bg-[#111] border-gray-800 text-white placeholder:text-gray-500 focus:border-gray-700 focus:ring-0"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleAddSource}
+                    disabled={!newSource.url} // Only require URL, name can be optional
+                    className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add
+                  </Button>
                 </div>
               </div>
-            )}
-
-            {formData.schedule.frequency === "monthly" && (
-              <div className="space-y-2">
-                <Label className="text-gray-300 font-light">Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-light border-gray-700 bg-[#111] text-white hover:bg-gray-800",
-                        !formData.schedule.date && "text-gray-500"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.schedule.date ? (
-                        format(formData.schedule.date, "PPP")
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 bg-[#111] border-gray-800">
-                    <Calendar
-                      mode="single"
-                      selected={formData.schedule.date}
-                      onSelect={(date) =>
-                        setFormData({
-                          ...formData,
-                          schedule: { ...formData.schedule, date },
-                        })
-                      }
-                      initialFocus
-                      className="bg-[#111] text-white"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            )}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="filters" className="space-y-4 pt-4">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-gray-300 font-light">Keywords</Label>
-              <Textarea
-                placeholder="Enter keywords (one per line)"
-                value={formData.filters.keywords.join("\n")}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    filters: {
-                      ...formData.filters,
-                      keywords: e.target.value.split("\n").filter(Boolean),
-                    },
-                  })
-                }
-                className="bg-[#111] border-gray-800 text-white placeholder:text-gray-500 focus:border-gray-700 focus:ring-0"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-gray-300 font-light">Exclude Keywords</Label>
-              <Textarea
-                placeholder="Enter keywords to exclude (one per line)"
-                value={formData.filters.excludeKeywords.join("\n")}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    filters: {
-                      ...formData.filters,
-                      excludeKeywords: e.target.value.split("\n").filter(Boolean),
-                    },
-                  })
-                }
-                className="bg-[#111] border-gray-800 text-white placeholder:text-gray-500 focus:border-gray-700 focus:ring-0"
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-gray-300 font-light">Min Word Count</Label>
-                <Input
-                  type="number"
-                  value={formData.filters.minWordCount}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      filters: {
-                        ...formData.filters,
-                        minWordCount: parseInt(e.target.value) || 0,
-                      },
-                    })
-                  }
-                  className="bg-[#111] border-gray-800 text-white focus:border-gray-700 focus:ring-0"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-gray-300 font-light">Max Word Count</Label>
-                <Input
-                  type="number"
-                  value={formData.filters.maxWordCount}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      filters: {
-                        ...formData.filters,
-                        maxWordCount: parseInt(e.target.value) || 0,
-                      },
-                    })
-                  }
-                  className="bg-[#111] border-gray-800 text-white focus:border-gray-700 focus:ring-0"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="include-images"
-                  checked={formData.filters.includeImages}
-                  onCheckedChange={(checked) =>
-                    setFormData({
-                      ...formData,
-                      filters: {
-                        ...formData.filters,
-                        includeImages: checked,
-                      },
-                    })
-                  }
-                />
-                <Label htmlFor="include-images" className="text-gray-300 font-light">Include Images</Label>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="include-pdf"
-                  checked={formData.filters.includePDF}
-                  onCheckedChange={(checked) =>
-                    setFormData({
-                      ...formData,
-                      filters: {
-                        ...formData.filters,
-                        includePDF: checked,
-                      },
-                    })
-                  }
-                />
-                <Label htmlFor="include-pdf" className="text-gray-300 font-light">Include PDF Documents</Label>
-              </div>
             </div>
           </div>
-        </TabsContent>
+        </div>
+      </div>
 
-        <TabsContent value="persona" className="space-y-4 pt-4">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-gray-300 font-light">Select Persona</Label>
-              <Select
-                value={formData.personaId}
-                onValueChange={(value) =>
-                  setFormData({
-                    ...formData,
-                    personaId: value,
-                  })
-                }
-              >
-                <SelectTrigger className="bg-[#111] border-gray-800 text-white focus:ring-0 focus:border-gray-700">
-                  <SelectValue placeholder="Select a persona" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#111] border-gray-800 text-white">
-                  {personas.map((persona) => (
-                    <SelectItem 
-                      key={persona.id} 
-                      value={persona.id}
-                      className="focus:bg-gray-800 focus:text-white"
-                    >
-                      {persona.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-gray-300 font-light">Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) =>
-                  setFormData({
-                    ...formData,
-                    status: value,
-                  })
-                }
-              >
-                <SelectTrigger className="bg-[#111] border-gray-800 text-white focus:ring-0 focus:border-gray-700">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#111] border-gray-800 text-white">
-                  <SelectItem value="active" className="focus:bg-gray-800 focus:text-white">
-                    <div className="flex items-center">
-                      <span className="inline-flex items-center w-3 h-3 mr-2 rounded-full bg-green-900/30 text-green-400"></span>
-                      <span>Active</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="paused" className="focus:bg-gray-800 focus:text-white">
-                    <div className="flex items-center">
-                      <span className="inline-flex items-center w-3 h-3 mr-2 rounded-full bg-yellow-900/30 text-yellow-400"></span>
-                      <span>Paused</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="draft" className="focus:bg-gray-800 focus:text-white">
-                    <div className="flex items-center">
-                      <span className="inline-flex items-center w-3 h-3 mr-2 rounded-full bg-gray-800 text-gray-400"></span>
-                      <span>Draft</span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
-
-      <div className="flex justify-end space-x-4 pt-4">
-        <Button 
-          type="button" 
-          variant="outline" 
+      <div className="flex justify-end space-x-4 pt-4 border-t border-gray-800">
+        <Button
+          type="button"
+          variant="outline"
           onClick={onCancel}
           className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
         >
+          <X className="h-4 w-4 mr-2" />
           Cancel
         </Button>
-        <Button 
+        <Button
           type="submit"
           className="bg-white text-black hover:bg-gray-200 font-light"
         >
@@ -435,4 +262,4 @@ export function ScrapingPackageConfigForm({ scrapingPackage, personas = [], onSu
       </div>
     </form>
   );
-} 
+}
