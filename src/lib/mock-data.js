@@ -568,7 +568,8 @@ export const mockApi = {
         id: persona._id,
         name: persona.name,
         description: persona.description,
-        prompt: persona.prompt,
+        // Handle both old and new schema
+        ...(persona.inputs ? { inputs: persona.inputs } : { prompt: persona.prompt }),
         status: persona.status || 'active',
         createdAt: persona.created_at,
         email: persona.email || ''

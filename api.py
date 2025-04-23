@@ -210,10 +210,18 @@ def create_scraping_package():
             return jsonify({"error": "No data provided"}), 400
 
         # Validate required fields
-        required_fields = ["name", "description", "sources"]
+        required_fields = ["name", "description"]
         for field in required_fields:
             if field not in data:
                 return jsonify({"error": f"Missing required field: {field}"}), 400
+
+        # Check for either sources or rss_feeds
+        if "sources" not in data and "rss_feeds" not in data:
+            return jsonify({"error": "Missing required field: sources or rss_feeds"}), 400
+
+        # Normalize data: if rss_feeds is provided but sources is not, copy rss_feeds to sources
+        if "rss_feeds" in data and "sources" not in data:
+            data["sources"] = data["rss_feeds"]
 
         # Add creation timestamp
         data["created_at"] = datetime.datetime.utcnow()
@@ -256,6 +264,10 @@ def update_scraping_package(package_id):
         package = db.db.scraping_packages.find_one({"_id": obj_id})
         if package is None:
             return jsonify({"error": "Package not found"}), 404
+
+        # Check for either sources or rss_feeds
+        if "rss_feeds" in data and "sources" not in data:
+            data["sources"] = data["rss_feeds"]
 
         # Update timestamp
         data["updated_at"] = datetime.datetime.utcnow()
@@ -371,10 +383,14 @@ def create_persona():
             return jsonify({"error": "No data provided"}), 400
 
         # Validate required fields
-        required_fields = ["name", "description", "prompt"]
+        required_fields = ["name", "description"]
         for field in required_fields:
             if field not in data:
                 return jsonify({"error": f"Missing required field: {field}"}), 400
+
+        # Check for either prompt or inputs.prompt
+        if "prompt" not in data and ("inputs" not in data or "prompt" not in data["inputs"]):
+            return jsonify({"error": "Missing required field: prompt or inputs.prompt"}), 400
 
         # Add creation timestamp
         data["created_at"] = datetime.datetime.utcnow()

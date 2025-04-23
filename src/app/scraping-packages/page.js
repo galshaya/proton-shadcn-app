@@ -23,6 +23,7 @@ export default function ScrapingPackagesPage() {
   const [showRecipientModal, setShowRecipientModal] = useState(false)
   const [showConfigureModal, setShowConfigureModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showDeletePersonaModal, setShowDeletePersonaModal] = useState(false)
   const [selectedPackage, setSelectedPackage] = useState(null)
   const [selectedPersona, setSelectedPersona] = useState(null)
   const [selectedRecipient, setSelectedRecipient] = useState(null)
@@ -65,15 +66,29 @@ export default function ScrapingPackagesPage() {
         stats: pkg.stats || {}
       }));
 
-      // For now, still use mock data for personas and recipients
-      // In a real app, you would call the real APIs for these as well
+      // Get personas from the API
       const [personasData, recipientsData] = await Promise.all([
-        [], // Replace with real API call when available
-        [], // Replace with real API call when available
+        fetch('http://localhost:5001/api/personas').then(res => res.json()).catch(err => {
+          console.error('Error fetching personas:', err);
+          return [];
+        }),
+        [], // Replace with real API call when available for recipients
       ]);
 
+      // Transform personas data to match expected format
+      const transformedPersonas = personasData.map(persona => ({
+        id: persona._id,
+        name: persona.name,
+        description: persona.description,
+        // Handle both old and new schema
+        ...(persona.inputs ? { inputs: persona.inputs } : { prompt: persona.prompt }),
+        status: persona.status || 'active',
+        createdAt: persona.created_at,
+        email: persona.email || ''
+      }));
+
       setPackages(packagesData || [])
-      setPersonas(personasData || [])
+      setPersonas(transformedPersonas || [])
       setRecipients(recipientsData || [])
     } catch (error) {
       console.error("Error loading data:", error)
@@ -194,24 +209,105 @@ export default function ScrapingPackagesPage() {
     }
   }
 
-  const handleCreatePersona = (formData) => {
-    const newPersona = {
-      id: "pers_" + Math.random().toString(36).substring(2, 9),
-      ...formData,
-      createdAt: new Date().toISOString(),
-      status: "active"
+  const handleCreatePersona = async (formData) => {
+    try {
+      setIsLoading(true);
+      console.log('Creating persona with data:', formData);
+
+      // Call the API to create the persona
+      const response = await fetch('http://localhost:5001/api/personas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          description: formData.description,
+          // If using new schema with inputs
+          ...(formData.inputs ? { inputs: formData.inputs } : { prompt: formData.prompt })
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create persona: ${response.statusText}`);
+      }
+
+      const newPersona = await response.json();
+
+      // Transform response to match expected format
+      const transformedPersona = {
+        id: newPersona._id,
+        name: newPersona.name,
+        description: newPersona.description,
+        // Handle both old and new schema
+        ...(newPersona.inputs ? { inputs: newPersona.inputs } : { prompt: newPersona.prompt }),
+        status: newPersona.status || 'active',
+        createdAt: newPersona.created_at,
+        email: newPersona.email || ''
+      };
+
+      // Update the local state
+      setPersonas([...personas, transformedPersona]);
+      setShowPersonaModal(false);
+    } catch (error) {
+      console.error("Error creating persona:", error);
+      alert(`Failed to create persona: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
-    setPersonas([...personas, newPersona])
-    setShowPersonaModal(false)
   }
 
-  const handleEditPersona = (formData) => {
-    const updatedPersonas = personas.map((persona) =>
-      persona.id === selectedPersona.id ? { ...persona, ...formData } : persona
-    )
-    setPersonas(updatedPersonas)
-    setSelectedPersona(null)
-    setShowPersonaModal(false)
+  const handleEditPersona = async (formData) => {
+    try {
+      setIsLoading(true);
+      console.log('Updating persona with ID:', selectedPersona.id, 'Data:', formData);
+
+      // Call the API to update the persona
+      const response = await fetch(`http://localhost:5001/api/personas/${selectedPersona.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          description: formData.description,
+          // If using new schema with inputs
+          ...(formData.inputs ? { inputs: formData.inputs } : { prompt: formData.prompt })
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update persona: ${response.statusText}`);
+      }
+
+      const updatedPersona = await response.json();
+
+      // Transform response to match expected format
+      const transformedPersona = {
+        id: updatedPersona._id,
+        name: updatedPersona.name,
+        description: updatedPersona.description,
+        // Handle both old and new schema
+        ...(updatedPersona.inputs ? { inputs: updatedPersona.inputs } : { prompt: updatedPersona.prompt }),
+        status: updatedPersona.status || 'active',
+        createdAt: updatedPersona.created_at,
+        email: updatedPersona.email || ''
+      };
+
+      // Update the local state
+      const updatedPersonas = personas.map((persona) =>
+        persona.id === selectedPersona.id ? { ...persona, ...transformedPersona } : persona
+      );
+
+      setPersonas(updatedPersonas);
+      setSelectedPersona(null);
+      setShowPersonaModal(false);
+    } catch (error) {
+      console.error("Error updating persona:", error);
+      alert(`Failed to update persona: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   const handleCreateRecipient = (formData) => {
@@ -277,6 +373,12 @@ export default function ScrapingPackagesPage() {
     setShowDeleteModal(true);
   }
 
+  const handleDeletePersona = (persona) => {
+    // Set the selected persona and show the delete confirmation modal
+    setSelectedPersona(persona);
+    setShowDeletePersonaModal(true);
+  }
+
   const confirmDeletePackage = async () => {
     try {
       setIsLoading(true);
@@ -298,6 +400,38 @@ export default function ScrapingPackagesPage() {
     } catch (error) {
       console.error("Error deleting package:", error);
       alert(`Failed to delete package: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const confirmDeletePersona = async () => {
+    try {
+      setIsLoading(true);
+      console.log('Deleting persona with ID:', selectedPersona.id);
+
+      // Call the API directly to delete the persona
+      const response = await fetch(`http://localhost:5001/api/personas/${selectedPersona.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete persona: ${response.statusText}`);
+      }
+
+      // Remove the persona from the local state
+      const updatedPersonas = personas.filter(p => p.id !== selectedPersona.id);
+      setPersonas(updatedPersonas);
+
+      // Close the modal and clear the selected persona
+      setShowDeletePersonaModal(false);
+      setSelectedPersona(null);
+
+      // Show success message
+      alert(`Persona deleted successfully.`);
+    } catch (error) {
+      console.error("Error deleting persona:", error);
+      alert(`Failed to delete persona: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -587,24 +721,38 @@ export default function ScrapingPackagesPage() {
                         <span className="text-gray-300">{formatDate(persona.createdAt)}</span>
                       </div>
                     </div>
-                    <div className="flex justify-between border-t border-gray-800 pt-4">
+                    <div className="border-t border-gray-800 pt-4 space-y-2">
+                      <div className="flex justify-between">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleManageRecipients(persona)}
+                          className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
+                        >
+                          <Users className="h-4 w-4 mr-2" />
+                          Recipients
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedPersona(persona);
+                            setShowPersonaModal(true);
+                          }}
+                          className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
+                      </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleManageRecipients(persona)}
-                        className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
+                        onClick={() => handleDeletePersona(persona)}
+                        className="border-gray-700 text-gray-300 hover:bg-red-900 hover:text-white font-light w-full"
                       >
-                        <Users className="h-4 w-4 mr-2" />
-                        Recipients
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditPersona(persona)}
-                        className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
+                        <Trash className="h-4 w-4 mr-2" />
+                        Delete
                       </Button>
                     </div>
                   </div>
@@ -736,11 +884,12 @@ export default function ScrapingPackagesPage() {
               setShowPersonaModal(false)
             }}
             onCancel={() => setShowPersonaModal(false)}
-            availableRecipients={recipients.filter(r => r.status === "active").map(r => ({
+            recipients={recipients.filter(r => r.status === "active").map(r => ({
               id: r.id,
               name: r.name,
               email: r.email,
             }))}
+            scrapingPackages={packages}
           />
         </Modal>
       )}
@@ -820,7 +969,7 @@ export default function ScrapingPackagesPage() {
         </Modal>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Package Confirmation Modal */}
       {showDeleteModal && selectedPackage && (
         <Modal
           title="Confirm Delete"
@@ -855,6 +1004,47 @@ export default function ScrapingPackagesPage() {
               >
                 <Trash className="h-4 w-4 mr-2" />
                 Delete Package
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Delete Persona Confirmation Modal */}
+      {showDeletePersonaModal && selectedPersona && (
+        <Modal
+          title="Confirm Delete"
+          isOpen={showDeletePersonaModal}
+          onClose={() => {
+            setShowDeletePersonaModal(false);
+            setSelectedPersona(null);
+          }}
+        >
+          <div className="space-y-4 py-2 pb-4">
+            <p className="text-white">
+              Are you sure you want to delete the persona <span className="font-semibold">"{selectedPersona.name}"</span>?
+            </p>
+            <p className="text-gray-400 text-sm">
+              This action cannot be undone. All associated data will be permanently removed.
+            </p>
+
+            <div className="flex justify-end space-x-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDeletePersonaModal(false);
+                  setSelectedPersona(null);
+                }}
+                className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmDeletePersona}
+                className="bg-red-600 hover:bg-red-700 text-white font-light"
+              >
+                <Trash className="h-4 w-4 mr-2" />
+                Delete Persona
               </Button>
             </div>
           </div>

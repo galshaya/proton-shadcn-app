@@ -5,7 +5,7 @@
  */
 
 // Base URL for API requests
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
 
 /**
  * Make a request to the API
@@ -145,10 +145,20 @@ export const personasApi = {
    * @param {Object} data - Persona data
    * @returns {Promise<Object>} - Created persona
    */
-  create: (data) => apiRequest('/api/personas', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
+  create: (data) => {
+    // Handle both old and new schema
+    const apiData = {
+      name: data.name,
+      description: data.description,
+      // If using new schema with inputs
+      ...(data.inputs ? { inputs: data.inputs } : { prompt: data.prompt })
+    };
+
+    return apiRequest('/api/personas', {
+      method: 'POST',
+      body: JSON.stringify(apiData),
+    });
+  },
 
   /**
    * Update a persona
@@ -156,10 +166,20 @@ export const personasApi = {
    * @param {Object} data - Persona data
    * @returns {Promise<Object>} - Updated persona
    */
-  update: (id, data) => apiRequest(`/api/personas/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  }),
+  update: (id, data) => {
+    // Handle both old and new schema
+    const apiData = {
+      name: data.name,
+      description: data.description,
+      // If using new schema with inputs
+      ...(data.inputs ? { inputs: data.inputs } : { prompt: data.prompt })
+    };
+
+    return apiRequest(`/api/personas/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(apiData),
+    });
+  },
 };
 
 /**
