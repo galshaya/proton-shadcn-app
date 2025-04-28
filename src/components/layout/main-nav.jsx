@@ -14,7 +14,7 @@ export function MainNav() {
           <Link
             href="/"
             className={cn(
-              "text-sm font-light transition-colors hover:text-white",
+              "text-sm font-medium transition-colors hover:text-white",
               pathname === "/" ? "text-white" : "text-gray-400"
             )}
           >
@@ -25,7 +25,7 @@ export function MainNav() {
           <Link
             href="/projects"
             className={cn(
-              "text-sm font-light transition-colors hover:text-white",
+              "text-sm font-medium transition-colors hover:text-white",
               pathname.startsWith("/projects") ? "text-white" : "text-gray-400"
             )}
           >
@@ -36,7 +36,7 @@ export function MainNav() {
           <Link
             href="/scraping-packages"
             className={cn(
-              "text-sm font-light transition-colors hover:text-white",
+              "text-sm font-medium transition-colors hover:text-white",
               pathname.startsWith("/scraping-packages") ? "text-white" : "text-gray-400"
             )}
           >

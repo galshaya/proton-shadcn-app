@@ -44,38 +44,49 @@
 }
 
 :root {
-  --background: 0 0% 6%;
-  --foreground: 0 0% 98%;
-  --card: 0 0% 10%;
-  --card-foreground: 0 0% 98%;
-  --popover: 0 0% 10%;
-  --popover-foreground: 0 0% 98%;
-  --primary: 0 0% 98%;
-  --primary-foreground: 0 0% 9%;
-  --secondary: 240 76% 44%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 0 0% 15%;
+  /* Base colors */
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  
+  /* Card and component colors */
+  --card: 0 0% 7%;
+  --card-foreground: 0 0% 100%;
+  --popover: 0 0% 7%;
+  --popover-foreground: 0 0% 100%;
+  
+  /* UI element colors */
+  --primary: 0 0% 100%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 0 0% 13%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 0 0% 13%;
   --muted-foreground: 0 0% 65%;
   --accent: 215 76% 44%;
-  --accent-foreground: 0 0% 98%;
+  --accent-foreground: 0 0% 100%;
+  
+  /* Status colors */
   --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 0 0% 18%;
-  --input: 0 0% 18%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 142 76% 38%;
+  --success-foreground: 0 0% 0%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 0%;
+  --info: 217 76% 44%;
+  --info-foreground: 0 0% 100%;
+  
+  /* Border, input, and UI detail colors */
+  --border: 0 0% 15%;
+  --input: 0 0% 15%;
   --ring: 0 0% 83.1%;
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  
+  /* Chart colors */
+  --chart-1: 142 76% 38%;
+  --chart-2: 217 76% 44%; 
+  --chart-3: 38 92% 50%;
+  --chart-4: 0 76% 50%;
+  --chart-5: 270 76% 50%;
+  
+  /* Border radius */
   --radius: 0.5rem;
 }
 
@@ -116,9 +127,75 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
+  
   body {
-    @apply bg-background text-foreground;
+    @apply bg-black text-white font-light;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-light text-white;
+  }
+  
+  p {
+    @apply text-gray-400;
+  }
+  
+  /* Card styling */
+  .card {
+    @apply bg-[#111] border border-gray-800 rounded-lg p-6;
+  }
+  
+  /* Status badges */
+  .badge-active {
+    @apply bg-green-500 text-black text-xs px-3 py-0.5 rounded-full;
+  }
+  
+  .badge-archived {
+    @apply bg-blue-700 text-white text-xs px-3 py-0.5 rounded-full;
+  }
+  
+  /* Table styling */
+  table {
+    @apply w-full text-left;
+  }
+  
+  thead {
+    @apply border-b border-gray-800;
+  }
+  
+  tbody tr {
+    @apply border-b border-gray-800 hover:bg-[#0a0a0a];
+  }
+  
+  th {
+    @apply px-6 py-3 text-sm font-light text-gray-400;
+  }
+  
+  td {
+    @apply px-6 py-4 text-sm;
+  }
+  
+  /* Search inputs */
+  input[type="search"], input[type="text"] {
+    @apply bg-[#111] border-gray-800 text-white rounded-md;
+  }
+  
+  /* Button styles */
+  .btn-primary {
+    @apply bg-white text-black hover:bg-gray-200;
+  }
+  
+  .btn-secondary {
+    @apply bg-[#222] text-white hover:bg-[#333];
+  }
+  
+  .btn-outline {
+    @apply border border-gray-700 bg-transparent text-white hover:bg-gray-800;
+  }
+  
+  .btn-danger {
+    @apply bg-red-900/30 text-red-400 hover:bg-red-900/50;
   }
 }
