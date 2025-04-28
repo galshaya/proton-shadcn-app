@@ -9,20 +9,14 @@ export function SiteHeader() {
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center">
             <Link href="/" className="text-xl font-light text-white mr-8">
-              <Image 
-                src="/proton logo.svg" 
-                alt="Proton AI"
-                width={120}
-                height={36}
-                priority
-              />
+              <span className="text-white font-light text-2xl">proton</span>
             </Link>
             <MainNav />
           </div>
           <div>
             <Link 
               href="/settings" 
-              className="text-sm font-light text-gray-400 hover:text-white transition-colors"
+              className="text-sm font-medium text-gray-400 hover:text-white transition-colors"
             >
               Settings
             </Link>

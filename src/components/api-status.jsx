@@ -2,14 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { mockApi } from '@/lib/mock-data';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 
 export function ApiStatus() {
-  const [status, setStatus] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState({ status: 'ok' });
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const checkApiStatus = async () => {
@@ -31,40 +28,36 @@ export function ApiStatus() {
   }, []);
 
   return (
-    <Card className="bg-[#111] border-gray-800 text-white">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <span className="text-sm font-light">API Status:</span>
-            {loading ? (
-              <Badge variant="outline" className="bg-gray-800 text-gray-400 border-gray-700">
-                Checking...
-              </Badge>
-            ) : error ? (
-              <Badge variant="outline" className="bg-red-900/30 text-red-400 border-red-900">
-                Error
-              </Badge>
-            ) : status?.status === 'ok' ? (
-              <Badge variant="outline" className="bg-green-900/30 text-green-400 border-green-900">
-                Connected
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="bg-yellow-900/30 text-yellow-400 border-yellow-900">
-                Offline
-              </Badge>
-            )}
-          </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={checkApiStatus} 
-            disabled={loading}
-            className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-gray-800"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
+    <div className="bg-[#111111] border border-gray-800 rounded-lg p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <span className="text-base font-medium text-white">API Status:</span>
+          {loading ? (
+            <span className="inline-flex items-center rounded-full bg-gray-800 text-gray-400 px-2.5 py-0.5 text-xs font-medium">
+              Checking...
+            </span>
+          ) : error ? (
+            <span className="inline-flex items-center rounded-full bg-red-600/20 text-red-400 px-2.5 py-0.5 text-xs font-medium">
+              Error
+            </span>
+          ) : status?.status === 'ok' ? (
+            <span className="inline-flex items-center rounded-full bg-green-500 text-black px-2.5 py-0.5 text-xs font-medium">
+              Connected
+            </span>
+          ) : (
+            <span className="inline-flex items-center rounded-full bg-yellow-600/20 text-yellow-400 px-2.5 py-0.5 text-xs font-medium">
+              Offline
+            </span>
+          )}
         </div>
-      </CardContent>
-    </Card>
+        <button 
+          onClick={checkApiStatus} 
+          disabled={loading}
+          className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-gray-800 inline-flex items-center justify-center rounded-md"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+    </div>
   );
 }
