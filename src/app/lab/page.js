@@ -105,7 +105,7 @@ export default function LabPage() {
   }, [])
 
   // Handle persona selection
-  const handlePersonaSelect = (personaId) => {
+  const handlePersonaSelect = async (personaId) => {
     console.log("Persona selected:", personaId);
 
     if (personaId === "_new") {
@@ -129,29 +129,75 @@ export default function LabPage() {
       return;
     }
 
-    const persona = personas.find(p => p.id === personaId);
-    if (persona) {
-      console.log("Found persona:", persona);
+    try {
+      // Fetch the persona directly from the API to ensure we have the latest data
+      const response = await fetch(`http://localhost:5001/api/personas/${personaId}`);
 
-      // Update form data with selected persona
-      setFormData({
-        name: persona.name,
-        description: persona.description,
-        inputs: {
-          model_name: persona.inputs?.model_name || "gpt-4o",
-          date_range: persona.inputs?.date_range || "all time",
-          search_query: persona.inputs?.search_query || "",
-          client_context: persona.inputs?.client_context || "",
-          project_context: persona.inputs?.project_context || "",
-          prompt: persona.inputs?.prompt || "",
-          package_ids: persona.inputs?.package_ids || [],
-          document_ids: persona.inputs?.document_ids || []
-        },
-        documents: persona.documents || []
+      if (!response.ok) {
+        throw new Error(`Failed to fetch persona: ${response.status} ${response.statusText}`);
+      }
+
+      const persona = await response.json();
+      console.log("Fetched persona from API:", JSON.stringify(persona, null, 2));
+
+      if (persona) {
+        // Ensure package_ids is always an array
+        const package_ids = Array.isArray(persona.inputs?.package_ids)
+          ? persona.inputs.package_ids
+          : [];
+
+        // Ensure document_ids is always an array
+        const document_ids = Array.isArray(persona.inputs?.document_ids)
+          ? persona.inputs.document_ids
+          : [];
+
+        // Ensure documents is always an array
+        const documents = Array.isArray(persona.documents)
+          ? persona.documents
+          : [];
+
+        console.log("Package IDs:", package_ids);
+        console.log("Document IDs:", document_ids);
+        console.log("Documents:", JSON.stringify(documents, null, 2));
+
+        // Update form data with selected persona
+        const newFormData = {
+          name: persona.name,
+          description: persona.description,
+          inputs: {
+            model_name: persona.inputs?.model_name || "gpt-4o",
+            date_range: persona.inputs?.date_range || "all time",
+            search_query: persona.inputs?.search_query || "",
+            client_context: persona.inputs?.client_context || "",
+            project_context: persona.inputs?.project_context || "",
+            prompt: persona.inputs?.prompt || "",
+            package_ids: [...package_ids], // Create a new array to ensure it's a new reference
+            document_ids: [...document_ids] // Create a new array to ensure it's a new reference
+          },
+          documents: documents.map(doc => ({...doc})) // Deep clone to ensure new references
+        };
+
+        console.log("Setting form data to:", JSON.stringify(newFormData, null, 2));
+
+        // Update form data
+        setFormData(newFormData);
+
+        // Update selected persona ID
+        setSelectedPersonaId(personaId);
+
+        // Show success toast
+        toast({
+          title: "Persona Loaded",
+          description: `Successfully loaded persona: ${persona.name}`,
+        });
+      }
+    } catch (error) {
+      console.error("Error loading persona:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to load persona: ${error.message}`,
       });
-
-      // Update selected persona ID
-      setSelectedPersonaId(personaId);
     }
   }
 
@@ -161,70 +207,105 @@ export default function LabPage() {
     setGeneratedContent("")
 
     try {
-      // Prepare data for API
-      const requestData = {
-        model: formData.inputs.model_name,
-        date_range: formData.inputs.date_range,
-        search_query: formData.inputs.search_query,
-        client_context: formData.inputs.client_context,
-        project_context: formData.inputs.project_context,
-        prompt: formData.inputs.prompt,
-        package_ids: formData.inputs.package_ids,
-        document_ids: formData.inputs.document_ids
-      }
+      console.log("Starting newsletter generation with form data:", JSON.stringify(formData, null, 2));
 
-      // Call the API
+      // Ensure document_ids is always an array
+      const document_ids = Array.isArray(formData.inputs?.document_ids)
+        ? [...formData.inputs.document_ids]
+        : [];
+
+      // Ensure package_ids is always an array
+      const package_ids = Array.isArray(formData.inputs?.package_ids)
+        ? [...formData.inputs.package_ids]
+        : [];
+
+      console.log("Document IDs for newsletter generation:", document_ids);
+      console.log("Package IDs for newsletter generation:", package_ids);
+
+      // Prepare data for API - following the updated API documentation
+      // We only need to pass document_ids, and the backend will handle retrieving and processing the content
+      const requestData = {
+        model: formData.inputs.model_name || "gpt-4o",
+        date_range: formData.inputs.date_range || "all time",
+        search_query: formData.inputs.search_query || "",
+        client_context: formData.inputs.client_context || "",
+        project_context: formData.inputs.project_context || "",
+        prompt: formData.inputs.prompt || "",
+        package_ids: package_ids,
+        document_ids: document_ids // This is the key field - just pass the IDs
+      };
+
+      console.log("Sending request data to API:", JSON.stringify(requestData, null, 2));
+
+      // Call the API - no special headers needed, just pass the document IDs
       const response = await fetch('http://localhost:5001/api/newsletter/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Include-Document-Content': 'true', // Tell the API to include document content
         },
         body: JSON.stringify(requestData),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error(`Failed to generate newsletter: ${response.statusText}`)
+        const errorText = await response.text();
+        throw new Error(`Failed to generate newsletter: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
-      const data = await response.json()
+      const data = await response.json();
+      console.log("API response:", JSON.stringify({
+        ...data,
+        context_used: data.context_used ? `${data.context_used.substring(0, 100)}...` : null,
+        outputs: data.outputs ? {
+          ...data.outputs,
+          context_used: data.outputs.context_used ? `${data.outputs.context_used.substring(0, 100)}...` : null
+        } : null
+      }, null, 2));
 
       // Extract the content from the response
-      // If there's a generated_content field, use that
-      // Otherwise, try content, text, or stringify the whole response
-      const content = data.generated_content || data.content || data.text || JSON.stringify(data, null, 2)
-      setGeneratedContent(content)
+      // If there's outputs.content field (new schema), use that
+      // Otherwise, try generated_content, content, text, or stringify the whole response
+      const content =
+        (data.outputs && data.outputs.content) ||
+        data.generated_content ||
+        data.content ||
+        data.text ||
+        JSON.stringify(data, null, 2);
+
+      setGeneratedContent(content);
 
       // Store the context separately if available
-      if (data.context_used) {
-        // Add document information to the context if documents were used
-        if (formData.inputs.document_ids && formData.inputs.document_ids.length > 0) {
-          const documentNames = formData.documents
-            .filter(doc => formData.inputs.document_ids.includes(doc.id))
-            .map(doc => doc.name)
-            .join(", ")
+      if (data.outputs?.context_used || data.context_used) {
+        const contextUsed = data.outputs?.context_used || data.context_used;
 
-          const documentContext = `DOCUMENTS USED:\n${documentNames}\n\n${data.context_used}`
-          setContextData(documentContext)
+        // Add document information to the context if documents were used
+        if (document_ids.length > 0) {
+          // Get document names from the form data
+          const documentNames = formData.documents
+            .filter(doc => document_ids.includes(doc.id))
+            .map(doc => doc.name)
+            .join(", ");
+
+          const documentContext = `DOCUMENTS USED:\n${documentNames}\n\n${contextUsed}`;
+          setContextData(documentContext);
         } else {
-          setContextData(data.context_used)
+          setContextData(contextUsed);
         }
       }
 
       toast({
         title: "Success",
         description: "Newsletter generated successfully",
-      })
+      });
     } catch (error) {
-      console.error("Error generating newsletter:", error)
+      console.error("Error generating newsletter:", error);
       toast({
         variant: "destructive",
         title: "Error",
         description: `Failed to generate newsletter: ${error.message}`,
-      })
-      setGeneratedContent(`Error: ${error.message}`)
+      });
+      setGeneratedContent(`Error: ${error.message}`);
     } finally {
-      setIsGenerating(false)
+      setIsGenerating(false);
     }
   }
 
@@ -233,61 +314,157 @@ export default function LabPage() {
     setIsLoading(true)
 
     try {
-      // First, upload any documents if needed
-      // In a real implementation, we would upload each document to the server
-      // For now, we'll just include them in the persona data
+      console.log("Starting save persona operation with formData:", JSON.stringify(formData, null, 2));
+      console.log("Selected persona ID:", selectedPersonaId);
 
-      let response
+      // Deep clone the form data to avoid reference issues
+      const clonedFormData = JSON.parse(JSON.stringify(formData));
 
-      if (selectedPersonaId) {
+      // Ensure package_ids is always an array
+      const package_ids = Array.isArray(clonedFormData.inputs?.package_ids)
+        ? [...clonedFormData.inputs.package_ids]
+        : [];
+
+      // Ensure document_ids is always an array
+      const document_ids = Array.isArray(clonedFormData.inputs?.document_ids)
+        ? [...clonedFormData.inputs.document_ids]
+        : [];
+
+      // Ensure documents is always an array
+      const documents = Array.isArray(clonedFormData.documents)
+        ? clonedFormData.documents.map(doc => ({...doc}))  // Deep clone each document
+        : [];
+
+      console.log("Saving persona with package IDs:", package_ids);
+      console.log("Saving persona with document IDs:", document_ids);
+      console.log("Saving persona with documents:", JSON.stringify(documents, null, 2));
+
+      // Make sure document_ids and documents are in sync
+      // Create a map of existing documents by ID for quick lookup
+      const documentMap = {};
+      documents.forEach(doc => {
+        if (doc && doc.id) {
+          documentMap[doc.id] = doc;
+        }
+      });
+
+      // Add any document IDs that are in documents but not in document_ids
+      const documentIdsFromDocuments = documents.map(doc => doc.id);
+      const missingDocumentIds = documentIdsFromDocuments.filter(id => !document_ids.includes(id));
+
+      if (missingDocumentIds.length > 0) {
+        console.log("Adding missing document IDs to document_ids:", missingDocumentIds);
+        document_ids.push(...missingDocumentIds);
+      }
+
+      // Add any documents that are in document_ids but not in documents
+      const missingDocuments = document_ids.filter(id => !documentIdsFromDocuments.includes(id));
+
+      if (missingDocuments.length > 0) {
+        console.log("Fetching missing documents:", missingDocuments);
+        try {
+          const fetchedDocuments = await Promise.all(
+            missingDocuments.map(async (docId) => {
+              try {
+                const response = await fetch(`http://localhost:5001/api/documents/${docId}`);
+                if (!response.ok) {
+                  console.warn(`Failed to fetch document ${docId}: ${response.status} ${response.statusText}`);
+                  return null;
+                }
+                const docData = await response.json();
+
+                // Transform API response to match the expected document format
+                return {
+                  id: docData._id,
+                  name: docData.document_name,
+                  type: docData.document_type,
+                  uploadedAt: docData.upload_date
+                };
+              } catch (error) {
+                console.warn(`Error fetching document ${docId}:`, error);
+                return null;
+              }
+            })
+          );
+
+          // Filter out null values and add to documents
+          const validDocuments = fetchedDocuments.filter(doc => doc !== null);
+          console.log("Fetched documents:", JSON.stringify(validDocuments, null, 2));
+
+          // Add fetched documents to the documents array
+          validDocuments.forEach(doc => {
+            if (!documentMap[doc.id]) {
+              documents.push(doc);
+              documentMap[doc.id] = doc;
+            }
+          });
+        } catch (error) {
+          console.error("Error fetching documents:", error);
+        }
+      }
+
+      // Prepare the data to save
+      const personaData = {
+        name: clonedFormData.name,
+        description: clonedFormData.description,
+        inputs: {
+          ...clonedFormData.inputs,
+          model_name: clonedFormData.inputs.model_name || "gpt-4.1",
+          date_range: clonedFormData.inputs.date_range || "all time",
+          package_ids: [...package_ids], // Create a new array to ensure it's a new reference
+          document_ids: [...document_ids] // Create a new array to ensure it's a new reference
+        },
+        documents: documents.map(doc => ({
+          id: doc.id,
+          name: doc.name,
+          type: doc.type,
+          uploadedAt: doc.uploadedAt
+        }))
+      };
+
+      console.log("Saving persona data:", JSON.stringify(personaData, null, 2));
+
+      let response;
+      let savedPersona;
+
+      if (selectedPersonaId && selectedPersonaId !== "_new") {
         // Update existing persona
+        console.log(`Updating existing persona with ID: ${selectedPersonaId}`);
         response = await fetch(`http://localhost:5001/api/personas/${selectedPersonaId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            name: formData.name,
-            description: formData.description,
-            inputs: formData.inputs,
-            documents: formData.documents.map(doc => ({
-              id: doc.id,
-              name: doc.name,
-              type: doc.type,
-              uploadedAt: doc.uploadedAt
-            }))
-          }),
-        })
+          body: JSON.stringify(personaData),
+        });
       } else {
         // Create new persona
+        console.log("Creating new persona");
         response = await fetch('http://localhost:5001/api/personas', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            name: formData.name,
-            description: formData.description,
-            inputs: formData.inputs,
-            documents: formData.documents.map(doc => ({
-              id: doc.id,
-              name: doc.name,
-              type: doc.type,
-              uploadedAt: doc.uploadedAt
-            }))
-          }),
-        })
+          body: JSON.stringify(personaData),
+        });
       }
 
       if (!response.ok) {
-        throw new Error(`Failed to save persona: ${response.statusText}`)
+        const errorText = await response.text();
+        throw new Error(`Failed to save persona: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
-      const savedPersona = await response.json()
+      savedPersona = await response.json();
+      console.log("Saved persona response:", JSON.stringify(savedPersona, null, 2));
 
       // Refresh personas list
-      const personasResponse = await fetch('http://localhost:5001/api/personas')
-      const personasData = await personasResponse.json()
+      const personasResponse = await fetch('http://localhost:5001/api/personas');
+      if (!personasResponse.ok) {
+        throw new Error(`Failed to fetch personas: ${personasResponse.status} ${personasResponse.statusText}`);
+      }
+
+      const personasData = await personasResponse.json();
+      console.log("Fetched personas:", JSON.stringify(personasData, null, 2));
 
       // Transform personas data
       const transformedPersonas = personasData.map(persona => ({
@@ -308,28 +485,46 @@ export default function LabPage() {
           }
         }),
         documents: persona.documents || []
-      }))
+      }));
 
-      setPersonas(transformedPersonas)
+      setPersonas(transformedPersonas);
 
       // Update selected persona ID if creating new
-      if (!selectedPersonaId) {
-        setSelectedPersonaId(savedPersona._id)
+      if (!selectedPersonaId || selectedPersonaId === "_new") {
+        console.log(`Setting selected persona ID to: ${savedPersona._id}`);
+        setSelectedPersonaId(savedPersona._id);
       }
+
+      // Update the form data with the saved persona data to ensure consistency
+      const updatedFormData = {
+        name: savedPersona.name,
+        description: savedPersona.description,
+        inputs: {
+          ...(savedPersona.inputs || {}),
+          model_name: savedPersona.inputs?.model_name || "gpt-4.1",
+          date_range: savedPersona.inputs?.date_range || "all time",
+          package_ids: savedPersona.inputs?.package_ids || [],
+          document_ids: savedPersona.inputs?.document_ids || []
+        },
+        documents: savedPersona.documents || []
+      };
+
+      console.log("Updating form data with saved persona:", JSON.stringify(updatedFormData, null, 2));
+      setFormData(updatedFormData);
 
       toast({
         title: "Success",
-        description: `Persona ${selectedPersonaId ? "updated" : "created"} successfully`,
-      })
+        description: `Persona ${selectedPersonaId && selectedPersonaId !== "_new" ? "updated" : "created"} successfully`,
+      });
     } catch (error) {
-      console.error("Error saving persona:", error)
+      console.error("Error saving persona:", error);
       toast({
         variant: "destructive",
         title: "Error",
         description: `Failed to save persona: ${error.message}`,
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
@@ -347,80 +542,183 @@ export default function LabPage() {
   }
 
   // Import persona from JSON
-  const handleImportPersona = (event) => {
+  const handleImportPersona = async (event) => {
     const file = event.target.files[0]
     if (!file) return
 
     const reader = new FileReader()
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const importedData = JSON.parse(e.target.result)
+        console.log("Imported data:", JSON.stringify(importedData, null, 2));
+
+        // Initialize variables for persona data
+        let name = "";
+        let description = "";
+        let inputs = {};
+        let documents = [];
+        let document_ids = [];
+        let package_ids = [];
 
         // Handle different JSON structures
-        // Case 1: Standard persona format with name, description, inputs
         if (importedData.name && importedData.description) {
-          setFormData({
-            name: importedData.name,
-            description: importedData.description,
-            inputs: {
-              model_name: importedData.inputs?.model_name || "gpt-4o",
-              date_range: importedData.inputs?.date_range || "all time",
-              search_query: importedData.inputs?.search_query || "",
-              client_context: importedData.inputs?.client_context || "",
-              project_context: importedData.inputs?.project_context || "",
-              prompt: importedData.inputs?.prompt || importedData.prompt || "",
-              package_ids: importedData.inputs?.package_ids || [],
-              document_ids: importedData.inputs?.document_ids || []
-            },
-            documents: importedData.documents || []
-          })
-        }
-        // Case 2: Just inputs object (like the example provided)
-        else if (importedData.inputs) {
-          // Create a name based on the search query or model
-          const generatedName = importedData.inputs.search_query
-            ? `Persona for ${importedData.inputs.search_query.split(',')[0]}`
-            : `${importedData.inputs.model_name || 'AI'} Persona`
+          // Case 1: Standard persona format with name, description, inputs
+          name = importedData.name;
+          description = importedData.description;
 
-          setFormData({
-            name: generatedName,
-            description: importedData.inputs.client_context || importedData.inputs.project_context || "Imported persona",
-            inputs: {
-              model_name: importedData.inputs.model_name || "gpt-4o",
-              date_range: importedData.inputs.date_range || "all time",
-              search_query: importedData.inputs.search_query || "",
-              client_context: importedData.inputs.client_context || "",
-              project_context: importedData.inputs.project_context || "",
-              prompt: importedData.inputs.prompt || "",
-              package_ids: importedData.inputs.package_ids || [],
-              document_ids: importedData.inputs.document_ids || []
-            },
-            documents: importedData.documents || []
-          })
+          // Handle inputs
+          if (importedData.inputs) {
+            inputs = importedData.inputs;
+          } else if (importedData.prompt) {
+            // Legacy format with prompt at top level
+            inputs = {
+              model_name: "gpt-4o",
+              date_range: "all time",
+              prompt: importedData.prompt
+            };
+          }
 
-          // Reset selected persona
-          setSelectedPersonaId("")
+          // Handle documents
+          if (Array.isArray(importedData.documents)) {
+            documents = [...importedData.documents];
+          }
+
+        } else if (importedData.inputs) {
+          // Case 2: Just inputs object or inputs+outputs format
+          inputs = importedData.inputs;
+
+          // Generate name from search query or model
+          name = inputs.search_query
+            ? `Persona for ${inputs.search_query.split(',')[0]}`
+            : `${inputs.model_name || 'AI'} Persona`;
+
+          // Generate description from context fields
+          description = inputs.client_context || inputs.project_context || "Imported persona";
+
+          // Handle documents if present
+          if (Array.isArray(importedData.documents)) {
+            documents = [...importedData.documents];
+          }
         } else {
-          throw new Error("Invalid persona data: missing required fields or unsupported format")
+          throw new Error("Invalid persona data: missing required fields or unsupported format");
         }
+
+        // Ensure package_ids is always an array
+        package_ids = Array.isArray(inputs.package_ids) ? [...inputs.package_ids] : [];
+
+        // Ensure document_ids is always an array
+        document_ids = Array.isArray(inputs.document_ids) ? [...inputs.document_ids] : [];
+
+        // Remove duplicates from document_ids
+        document_ids = [...new Set(document_ids)];
+
+        console.log("Package IDs:", package_ids);
+        console.log("Document IDs:", document_ids);
+        console.log("Documents:", JSON.stringify(documents, null, 2));
+
+        // Create a map of existing documents by ID for quick lookup
+        const documentMap = {};
+        documents.forEach(doc => {
+          if (doc && doc.id) {
+            documentMap[doc.id] = doc;
+          }
+        });
+
+        // If we have document IDs that aren't in the documents array, fetch them from the API
+        const missingDocIds = document_ids.filter(id => !documentMap[id]);
+
+        if (missingDocIds.length > 0) {
+          try {
+            console.log("Fetching missing documents from API:", missingDocIds);
+            const fetchedDocuments = await Promise.all(
+              missingDocIds.map(async (docId) => {
+                try {
+                  const response = await fetch(`http://localhost:5001/api/documents/${docId}`);
+                  if (!response.ok) {
+                    console.warn(`Failed to fetch document ${docId}: ${response.status} ${response.statusText}`);
+                    return null;
+                  }
+                  const docData = await response.json();
+
+                  // Transform API response to match the expected document format
+                  return {
+                    id: docData._id,
+                    name: docData.document_name,
+                    type: docData.document_type,
+                    uploadedAt: docData.upload_date
+                  };
+                } catch (error) {
+                  console.warn(`Error fetching document ${docId}:`, error);
+                  return null;
+                }
+              })
+            );
+
+            // Filter out null values and add to documents
+            const validDocuments = fetchedDocuments.filter(doc => doc !== null);
+            console.log("Fetched documents:", JSON.stringify(validDocuments, null, 2));
+
+            // Add fetched documents to the documents array
+            validDocuments.forEach(doc => {
+              if (!documentMap[doc.id]) {
+                documents.push(doc);
+                documentMap[doc.id] = doc;
+              }
+            });
+          } catch (error) {
+            console.error("Error fetching documents:", error);
+          }
+        }
+
+        // Ensure all document_ids have corresponding documents
+        // If not, add the ID to the document_ids array
+        documents.forEach(doc => {
+          if (doc && doc.id && !document_ids.includes(doc.id)) {
+            document_ids.push(doc.id);
+          }
+        });
+
+        // Create the final form data object
+        const newFormData = {
+          name: name,
+          description: description,
+          inputs: {
+            model_name: inputs.model_name || "gpt-4o",
+            date_range: inputs.date_range || "all time",
+            search_query: inputs.search_query || "",
+            client_context: inputs.client_context || "",
+            project_context: inputs.project_context || "",
+            prompt: inputs.prompt || "",
+            package_ids: package_ids,
+            document_ids: document_ids,
+            article_limit: inputs.article_limit || "10"
+          },
+          documents: documents.map(doc => ({...doc})) // Deep clone to ensure new references
+        };
+
+        console.log("Setting form data to:", JSON.stringify(newFormData, null, 2));
+        setFormData(newFormData);
+
+        // Reset selected persona
+        setSelectedPersonaId("");
 
         toast({
           title: "Success",
           description: "Persona imported successfully",
-        })
+        });
       } catch (error) {
-        console.error("Error importing persona:", error)
+        console.error("Error importing persona:", error);
         toast({
           variant: "destructive",
           title: "Error",
           description: `Failed to import persona: ${error.message}`,
-        })
+        });
       }
-    }
-    reader.readAsText(file)
+    };
+    reader.readAsText(file);
 
     // Reset file input
-    event.target.value = null
+    event.target.value = null;
   }
 
   // Copy generated content to clipboard
@@ -512,7 +810,8 @@ export default function LabPage() {
 
               {/* Use the shared persona form component */}
               <SharedPersonaForm
-                persona={selectedPersonaId && selectedPersonaId !== "_new" ? personas.find(p => p.id === selectedPersonaId) : null}
+                key={selectedPersonaId || JSON.stringify(formData)} // Add key to force re-render when formData changes
+                persona={selectedPersonaId && selectedPersonaId !== "_new" ? personas.find(p => p.id === selectedPersonaId) : formData}
                 scrapingPackages={scrapingPackages}
                 onSubmit={(updatedFormData) => {
                   console.log("Form submitted with data:", updatedFormData);
