@@ -43,7 +43,18 @@ export function MainNav() {
             Content Sources
           </Link>
         </li>
+        <li>
+          <Link
+            href="/lab"
+            className={cn(
+              "text-sm font-medium transition-colors hover:text-white",
+              pathname.startsWith("/lab") ? "text-white" : "text-gray-400"
+            )}
+          >
+            AI Lab
+          </Link>
+        </li>
       </ul>
     </nav>
   )
-} 
+}

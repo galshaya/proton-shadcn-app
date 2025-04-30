@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Modal } from "@/components/ui/modal"
-import { PersonaForm } from "@/components/forms/persona-form"
+import { SharedPersonaForm } from "@/components/shared/persona-form"
 import { RecipientForm } from "@/components/forms/recipient-form"
 import { ScrapingPackageConfigForm } from "@/components/forms/scraping-package-config-form"
 
@@ -873,7 +873,7 @@ export default function ScrapingPackagesPage() {
           isOpen={showPersonaModal}
           onClose={() => setShowPersonaModal(false)}
         >
-          <PersonaForm
+          <SharedPersonaForm
             persona={selectedPersona}
             onSubmit={(persona) => {
               if (selectedPersona) {
@@ -890,6 +890,7 @@ export default function ScrapingPackagesPage() {
               email: r.email,
             }))}
             scrapingPackages={packages}
+            embedded={true}
           />
         </Modal>
       )}
