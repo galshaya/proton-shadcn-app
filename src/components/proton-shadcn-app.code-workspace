@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../../proton_db"
+		}
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "proton_db"
+	}
+}
