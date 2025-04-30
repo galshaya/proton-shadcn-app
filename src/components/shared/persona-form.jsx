@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -41,8 +41,8 @@ export function SharedPersonaForm({
   personas = [],
   selectedPersonaId = "",
 }) {
-  // Form state - initialize with default values
-  const defaultFormData = {
+  // Form state - initialize with default values using useMemo to prevent recreation on each render
+  const defaultFormData = useMemo(() => ({
     name: "",
     description: "",
     inputs: {
@@ -57,25 +57,31 @@ export function SharedPersonaForm({
     },
     documents: [],
     selectedRecipients: [],
-  }
+  }), []); // Empty dependency array means this will only be created once
 
   // Use the provided formData from parent if available, otherwise use default
-  const [formData, setFormData] = useState(persona ? {
-    name: persona.name || "",
-    description: persona.description || "",
-    inputs: {
-      model_name: persona.inputs?.model_name || "gpt-4.1",
-      date_range: persona.inputs?.date_range || "all time",
-      search_query: persona.inputs?.search_query || "",
-      client_context: persona.inputs?.client_context || "",
-      project_context: persona.inputs?.project_context || "",
-      prompt: persona.inputs?.prompt || persona?.prompt || "",
-      package_ids: persona.inputs?.package_ids || [],
-      document_ids: persona.inputs?.document_ids || []
-    },
-    documents: persona.documents || [],
-    selectedRecipients: persona.recipients || [],
-  } : defaultFormData)
+  const [formData, setFormData] = useState(() => {
+    if (persona) {
+      return {
+        name: persona.name || "",
+        description: persona.description || "",
+        inputs: {
+          model_name: persona.inputs?.model_name || "gpt-4.1",
+          date_range: persona.inputs?.date_range || "all time",
+          search_query: persona.inputs?.search_query || "",
+          client_context: persona.inputs?.client_context || "",
+          project_context: persona.inputs?.project_context || "",
+          prompt: persona.inputs?.prompt || persona?.prompt || "",
+          package_ids: persona.inputs?.package_ids || [],
+          document_ids: persona.inputs?.document_ids || []
+        },
+        documents: persona.documents || [],
+        selectedRecipients: persona.recipients || [],
+      };
+    } else {
+      return defaultFormData;
+    }
+  })
 
   // Document handling state
   const [availableDocuments, setAvailableDocuments] = useState([])
@@ -97,8 +103,32 @@ export function SharedPersonaForm({
   // Update form data when persona changes - only when the persona prop changes
   useEffect(() => {
     if (persona) {
-      console.log("Persona prop changed, updating form data:", persona);
-      setFormData({
+      console.log("Persona prop changed, updating form data:", JSON.stringify(persona, null, 2));
+
+      // Ensure package_ids is always an array
+      const package_ids = Array.isArray(persona.inputs?.package_ids)
+        ? persona.inputs.package_ids
+        : [];
+
+      // Ensure document_ids is always an array
+      const document_ids = Array.isArray(persona.inputs?.document_ids)
+        ? persona.inputs.document_ids
+        : [];
+
+      // Ensure documents is always an array
+      const documents = Array.isArray(persona.documents)
+        ? persona.documents
+        : [];
+
+      console.log("Package IDs:", package_ids);
+      console.log("Document IDs:", document_ids);
+      console.log("Documents:", JSON.stringify(documents, null, 2));
+
+      // Deep clone the documents array to ensure it's a new reference
+      const documentsCopy = documents.map(doc => ({...doc}));
+
+      // Create a new form data object with all the necessary fields
+      const newFormData = {
         name: persona.name || "",
         description: persona.description || "",
         inputs: {
@@ -108,17 +138,25 @@ export function SharedPersonaForm({
           client_context: persona.inputs?.client_context || "",
           project_context: persona.inputs?.project_context || "",
           prompt: persona.inputs?.prompt || persona?.prompt || "",
-          package_ids: persona.inputs?.package_ids || [],
-          document_ids: persona.inputs?.document_ids || []
+          package_ids: [...package_ids], // Create a new array to ensure it's a new reference
+          document_ids: [...document_ids] // Create a new array to ensure it's a new reference
         },
-        documents: persona.documents || [],
-        selectedRecipients: persona.recipients || []
-      });
+        documents: documentsCopy,
+        selectedRecipients: persona.recipients ? [...persona.recipients] : []
+      };
+
+      console.log("Setting form data to:", JSON.stringify(newFormData, null, 2));
+
+      // Update the form data
+      setFormData(newFormData);
+
+      // Also refresh the documents list to ensure we have the latest documents
+      loadDocuments();
     } else {
       console.log("No persona provided, using defaults");
-      setFormData(defaultFormData);
+      setFormData({...defaultFormData}); // Create a new object to ensure it's a new reference
     }
-  }, [persona])
+  }, [persona]) // Remove defaultFormData from dependencies to prevent unnecessary updates
 
   // Load documents from API
   const loadDocuments = async () => {
@@ -155,7 +193,7 @@ export function SharedPersonaForm({
   const handleSubmit = (e) => {
     e.preventDefault()
 
-    // Create a copy of the form data with properly formatted documents
+    // Create a copy of the form data with properly formatted documents and package IDs
     const formattedData = {
       ...formData,
       documents: formData.documents.map(doc => ({
@@ -163,9 +201,15 @@ export function SharedPersonaForm({
         name: doc.name,
         type: doc.type,
         uploadedAt: doc.uploadedAt
-      }))
+      })),
+      inputs: {
+        ...formData.inputs,
+        // Ensure package_ids is always an array
+        package_ids: Array.isArray(formData.inputs.package_ids) ? formData.inputs.package_ids : []
+      }
     }
 
+    console.log("Submitting formatted data:", formattedData);
     onSubmit(formattedData)
   }
 
@@ -277,15 +321,33 @@ export function SharedPersonaForm({
     // Find the selected documents from available documents
     const selectedDocs = availableDocuments.filter(doc => selectedDocIds.includes(doc.id))
 
+    console.log("Selected documents:", selectedDocs);
+
     // Add to form data
-    setFormData(prevData => ({
-      ...prevData,
-      documents: [...prevData.documents, ...selectedDocs],
-      inputs: {
-        ...prevData.inputs,
-        document_ids: [...prevData.inputs.document_ids, ...selectedDocIds]
-      }
-    }))
+    setFormData(prevData => {
+      // Filter out documents that are already in the form
+      const newDocs = selectedDocs.filter(doc => !prevData.documents.some(d => d.id === doc.id))
+
+      // Ensure document_ids is always an array
+      const currentDocIds = Array.isArray(prevData.inputs.document_ids)
+        ? prevData.inputs.document_ids
+        : [];
+
+      // Get new document IDs that aren't already in the list
+      const newDocIds = selectedDocIds.filter(id => !currentDocIds.includes(id));
+
+      console.log("Current document IDs:", currentDocIds);
+      console.log("New document IDs to add:", newDocIds);
+
+      return {
+        ...prevData,
+        documents: [...prevData.documents, ...newDocs],
+        inputs: {
+          ...prevData.inputs,
+          document_ids: [...currentDocIds, ...newDocIds]
+        }
+      };
+    });
 
     // Close document selector
     setShowDocumentSelector(false)
@@ -298,14 +360,30 @@ export function SharedPersonaForm({
 
   // Function to remove a document
   const handleRemoveDocument = (docId) => {
-    setFormData(prevData => ({
-      ...prevData,
-      documents: prevData.documents.filter(doc => doc.id !== docId),
-      inputs: {
-        ...prevData.inputs,
-        document_ids: prevData.inputs.document_ids.filter(id => id !== docId)
-      }
-    }))
+    console.log("Removing document with ID:", docId);
+
+    setFormData(prevData => {
+      // Ensure document_ids is always an array
+      const currentDocIds = Array.isArray(prevData.inputs.document_ids)
+        ? prevData.inputs.document_ids
+        : [];
+
+      console.log("Current document IDs before removal:", currentDocIds);
+
+      return {
+        ...prevData,
+        documents: prevData.documents.filter(doc => doc.id !== docId),
+        inputs: {
+          ...prevData.inputs,
+          document_ids: currentDocIds.filter(id => id !== docId)
+        }
+      };
+    });
+
+    toast({
+      title: "Document Removed",
+      description: "Document has been removed from the persona",
+    });
   }
 
   const handleAddDocuments = async () => {
@@ -345,14 +423,24 @@ export function SharedPersonaForm({
       }
 
       // Add to form data
-      setFormData(prevData => ({
-        ...prevData,
-        documents: [...prevData.documents, ...uploadedDocs],
-        inputs: {
-          ...prevData.inputs,
-          document_ids: [...prevData.inputs.document_ids, ...uploadedDocIds]
-        }
-      }))
+      setFormData(prevData => {
+        // Ensure document_ids is always an array
+        const currentDocIds = Array.isArray(prevData.inputs.document_ids)
+          ? prevData.inputs.document_ids
+          : [];
+
+        console.log("Current document IDs before adding:", currentDocIds);
+        console.log("New document IDs to add:", uploadedDocIds);
+
+        return {
+          ...prevData,
+          documents: [...prevData.documents, ...uploadedDocs],
+          inputs: {
+            ...prevData.inputs,
+            document_ids: [...currentDocIds, ...uploadedDocIds]
+          }
+        };
+      })
 
       // Clear uploaded files
       setUploadedFiles([])
@@ -846,7 +934,12 @@ export function SharedPersonaForm({
                   name: doc.name,
                   type: doc.type,
                   uploadedAt: doc.uploadedAt
-                }))
+                })),
+                inputs: {
+                  ...formData.inputs,
+                  // Ensure package_ids is always an array
+                  package_ids: Array.isArray(formData.inputs.package_ids) ? formData.inputs.package_ids : []
+                }
               };
               onSubmit(formattedData);
             }}

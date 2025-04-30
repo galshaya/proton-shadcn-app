@@ -86,9 +86,18 @@ export const scrapingPackagesApi = {
     // Log the data being sent
     console.log('Creating package with data:', data);
 
+    // Ensure both sources and rss_feeds are included for compatibility
+    const apiData = {
+      ...data,
+      sources: data.sources || data.rss_feeds || [],
+      rss_feeds: data.sources || data.rss_feeds || []
+    };
+
+    console.log('Transformed API data for new package:', apiData);
+
     return apiRequest('/api/scraping-packages', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(apiData),
     });
   },
 
@@ -102,9 +111,18 @@ export const scrapingPackagesApi = {
     // Log the data being sent
     console.log(`Updating package ${id} with data:`, data);
 
+    // Ensure both sources and rss_feeds are included for compatibility
+    const apiData = {
+      ...data,
+      sources: data.sources || data.rss_feeds || [],
+      rss_feeds: data.sources || data.rss_feeds || []
+    };
+
+    console.log(`Transformed API data for package ${id}:`, apiData);
+
     return apiRequest(`/api/scraping-packages/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: JSON.stringify(apiData),
     });
   },
 

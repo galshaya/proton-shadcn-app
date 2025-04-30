@@ -112,8 +112,12 @@ export default function ScrapingPackagesPage() {
         calculate_embeddings: formData.calculate_embeddings !== false,
         extract_entities: formData.extract_entities !== false,
         summarize: formData.summarize !== false,
-        rss_feeds: formData.sources || [] // Use rss_feeds for compatibility with existing records
+        // Use both sources and rss_feeds for compatibility
+        sources: formData.sources || [],
+        rss_feeds: formData.sources || []
       };
+
+      console.log('API data being sent for package creation:', apiData);
 
       // Call the API directly
       const response = await scrapingPackagesApi.create(apiData);
@@ -166,8 +170,12 @@ export default function ScrapingPackagesPage() {
         calculate_embeddings: formData.calculate_embeddings !== false,
         extract_entities: formData.extract_entities !== false,
         summarize: formData.summarize !== false,
-        rss_feeds: formData.sources || [] // Use rss_feeds for compatibility with existing records
+        // Use both sources and rss_feeds for compatibility
+        sources: formData.sources || [],
+        rss_feeds: formData.sources || []
       };
+
+      console.log('API data being sent:', apiData);
 
       // Call the API directly
       const response = await scrapingPackagesApi.update(selectedPackage.id, apiData);
@@ -351,8 +359,12 @@ export default function ScrapingPackagesPage() {
         calculate_embeddings: pkg.calculate_embeddings !== false,
         extract_entities: pkg.extract_entities !== false,
         summarize: pkg.summarize !== false,
-        rss_feeds: pkg.sources || [] // Use rss_feeds for compatibility with existing records
+        // Use both sources and rss_feeds for compatibility
+        sources: pkg.sources || [],
+        rss_feeds: pkg.sources || []
       };
+
+      console.log('API data being sent for status toggle:', apiData);
 
       // Call the API directly
       await scrapingPackagesApi.update(pkg.id, apiData);
