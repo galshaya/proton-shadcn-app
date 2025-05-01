@@ -1,8 +1,8 @@
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import { SiteHeader } from "@/components/layout/site-header";
 import { Toaster } from "@/components/ui/toast";
+import ClientLayout from "./client-layout";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -19,10 +19,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn("min-h-screen bg-black text-white font-light", poppins.className)}>
-        <SiteHeader />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <ClientLayout>
           {children}
-        </div>
+        </ClientLayout>
         <Toaster />
       </body>
     </html>
