@@ -54,12 +54,11 @@ export function PersonaForm({ persona, recipients = [], scrapingPackages = [], o
   useEffect(() => {
     const loadDocuments = async () => {
       try {
-        const response = await fetch('http://localhost:5001/api/documents')
-        if (!response.ok) {
-          throw new Error(`Failed to fetch documents: ${response.statusText}`)
-        }
+        // Import the documents API
+        const { documentsApi } = await import('@/lib/apiClient');
 
-        const documentsData = await response.json()
+        // Use the documents API to fetch all documents
+        const documentsData = await documentsApi.getAll();
 
         // Transform documents data
         const transformedDocuments = documentsData.map(doc => ({
@@ -167,12 +166,11 @@ export function PersonaForm({ persona, recipients = [], scrapingPackages = [], o
   // Function to refresh document list
   const refreshDocuments = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/documents')
-      if (!response.ok) {
-        throw new Error(`Failed to fetch documents: ${response.statusText}`)
-      }
+      // Import the documents API
+      const { documentsApi } = await import('@/lib/apiClient');
 
-      const documentsData = await response.json()
+      // Use the documents API to fetch all documents
+      const documentsData = await documentsApi.getAll();
 
       // Transform documents data
       const transformedDocuments = documentsData.map(doc => ({
@@ -231,20 +229,12 @@ export function PersonaForm({ persona, recipients = [], scrapingPackages = [], o
       const uploadedDocs = []
       const uploadedDocIds = []
 
+      // Import the documents API
+      const { documentsApi } = await import('@/lib/apiClient');
+
       for (const file of uploadedFiles) {
-        const formDataObj = new FormData()
-        formDataObj.append('file', file.file)
-
-        const response = await fetch('http://localhost:5001/api/documents', {
-          method: 'POST',
-          body: formDataObj
-        })
-
-        if (!response.ok) {
-          throw new Error(`Failed to upload document: ${response.statusText}`)
-        }
-
-        const docData = await response.json()
+        // Use the documents API to upload the file
+        const docData = await documentsApi.upload(file.file);
 
         // Add to uploaded docs list
         uploadedDocs.push({

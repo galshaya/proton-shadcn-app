@@ -4,8 +4,8 @@
  * This module provides functions for interacting with the Proton API.
  */
 
-// Base URL for API requests
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+// Base URL for API requests - updated to use the deployed API on Render.com
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://proton-api-3k6g.onrender.com';
 
 /**
  * Make a request to the API
@@ -168,9 +168,13 @@ export const personasApi = {
     const apiData = {
       name: data.name,
       description: data.description,
+      // Include documents array if present
+      ...(data.documents ? { documents: data.documents } : {}),
       // If using new schema with inputs
       ...(data.inputs ? { inputs: data.inputs } : { prompt: data.prompt })
     };
+
+    console.log('Creating persona with data:', JSON.stringify(apiData, null, 2));
 
     return apiRequest('/api/personas', {
       method: 'POST',
@@ -189,13 +193,30 @@ export const personasApi = {
     const apiData = {
       name: data.name,
       description: data.description,
+      // Include documents array if present
+      ...(data.documents ? { documents: data.documents } : {}),
       // If using new schema with inputs
       ...(data.inputs ? { inputs: data.inputs } : { prompt: data.prompt })
     };
 
+    console.log(`Updating persona ${id} with data:`, JSON.stringify(apiData, null, 2));
+
     return apiRequest(`/api/personas/${id}`, {
       method: 'PUT',
       body: JSON.stringify(apiData),
+    });
+  },
+
+  /**
+   * Delete a persona
+   * @param {string} id - Persona ID
+   * @returns {Promise<Object>} - Response
+   */
+  delete: (id) => {
+    console.log(`Deleting persona ${id}`);
+
+    return apiRequest(`/api/personas/${id}`, {
+      method: 'DELETE',
     });
   },
 };
@@ -226,10 +247,127 @@ export const healthApi = {
   check: () => apiRequest('/api/health'),
 };
 
+/**
+ * Documents API
+ */
+export const documentsApi = {
+  /**
+   * Get all documents
+   * @returns {Promise<Array>} - List of documents
+   */
+  getAll: () => apiRequest('/api/documents'),
+
+  /**
+   * Get a specific document
+   * @param {string} id - Document ID
+   * @returns {Promise<Object>} - Document metadata
+   */
+  getById: (id) => apiRequest(`/api/documents/${id}`),
+
+  /**
+   * Get document content
+   * @param {string} id - Document ID
+   * @returns {Promise<Object>} - Document content
+   */
+  getContent: (id) => apiRequest(`/api/documents/${id}/content`),
+
+  /**
+   * Download document
+   * @param {string} id - Document ID
+   * @returns {Promise<Object>} - Document binary data
+   */
+  download: (id) => {
+    const url = `${API_BASE_URL}/api/documents/${id}/download`;
+    // This returns the URL that can be used in an <a> tag or window.open()
+    return url;
+  },
+
+  /**
+   * Upload a document
+   * @param {File} file - File to upload
+   * @param {string} projectId - Optional project ID
+   * @returns {Promise<Object>} - Uploaded document
+   */
+  upload: async (file, projectId = null) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    if (projectId) {
+      formData.append('project_id', projectId);
+    }
+
+    const url = `${API_BASE_URL}/api/documents`;
+    console.log(`Uploading document to ${url}`);
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Upload failed: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Document upload failed: ${error.message}`);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete a document
+   * @param {string} id - Document ID
+   * @returns {Promise<Object>} - Response
+   */
+  delete: (id) => apiRequest(`/api/documents/${id}`, {
+    method: 'DELETE',
+  }),
+};
+
+/**
+ * Enhanced Newsletter API with document support
+ */
+export const enhancedNewsletterApi = {
+  /**
+   * Generate a newsletter with documents
+   * @param {Object} params - Generation parameters
+   * @param {string} params.prompt - Prompt text
+   * @param {Array<string>} params.documentIds - Document IDs to include
+   * @param {string} params.model - Model to use (default: gpt-4o)
+   * @param {string} params.personaId - Optional persona ID
+   * @returns {Promise<Object>} - Generated newsletter
+   */
+  generateWithDocuments: (params) => {
+    const { prompt, documentIds, personaId, model = 'gpt-4o' } = params;
+
+    const data = {
+      model,
+      document_ids: documentIds,
+      prompt,
+    };
+
+    if (personaId) {
+      data.persona_id = personaId;
+    }
+
+    return apiRequest('/api/newsletter/generate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+};
+
+// Extend the newsletter API with the enhanced methods
+Object.assign(newsletterApi, enhancedNewsletterApi);
+
 // Export all APIs
 export default {
   scrapingPackages: scrapingPackagesApi,
   personas: personasApi,
   newsletter: newsletterApi,
+  documents: documentsApi,
   health: healthApi,
 };

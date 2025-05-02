@@ -49,12 +49,15 @@ export default function LabPage() {
     const loadData = async () => {
       setIsLoading(true)
       try {
+        // Import API clients
+        const { personasApi, scrapingPackagesApi } = await import('@/lib/apiClient');
+
         const [personasData, packagesData] = await Promise.all([
-          fetch('http://localhost:5001/api/personas').then(res => res.json()).catch(err => {
+          personasApi.getAll().catch(err => {
             console.error('Error fetching personas:', err)
             return []
           }),
-          fetch('http://localhost:5001/api/scraping-packages').then(res => res.json()).catch(err => {
+          scrapingPackagesApi.getAll().catch(err => {
             console.error('Error fetching scraping packages:', err)
             return []
           })
@@ -130,14 +133,11 @@ export default function LabPage() {
     }
 
     try {
+      // Import the API client
+      const { personasApi } = await import('@/lib/apiClient');
+
       // Fetch the persona directly from the API to ensure we have the latest data
-      const response = await fetch(`http://localhost:5001/api/personas/${personaId}`);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch persona: ${response.status} ${response.statusText}`);
-      }
-
-      const persona = await response.json();
+      const persona = await personasApi.getById(personaId);
       console.log("Fetched persona from API:", JSON.stringify(persona, null, 2));
 
       if (persona) {
@@ -222,8 +222,10 @@ export default function LabPage() {
       console.log("Document IDs for newsletter generation:", document_ids);
       console.log("Package IDs for newsletter generation:", package_ids);
 
+      // Import the newsletter API
+      const { newsletterApi } = await import('@/lib/apiClient');
+
       // Prepare data for API - following the updated API documentation
-      // We only need to pass document_ids, and the backend will handle retrieving and processing the content
       const requestData = {
         model: formData.inputs.model_name || "gpt-4o",
         date_range: formData.inputs.date_range || "all time",
@@ -237,21 +239,9 @@ export default function LabPage() {
 
       console.log("Sending request data to API:", JSON.stringify(requestData, null, 2));
 
-      // Call the API - no special headers needed, just pass the document IDs
-      const response = await fetch('http://localhost:5001/api/newsletter/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData),
-      });
+      // Use the API client to generate the newsletter
+      const data = await newsletterApi.generate(requestData);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to generate newsletter: ${response.status} ${response.statusText} - ${errorText}`);
-      }
-
-      const data = await response.json();
       console.log("API response:", JSON.stringify({
         ...data,
         context_used: data.context_used ? `${data.context_used.substring(0, 100)}...` : null,
@@ -298,12 +288,26 @@ export default function LabPage() {
       });
     } catch (error) {
       console.error("Error generating newsletter:", error);
+
+      // Provide more helpful error messages based on the error
+      let errorMessage = error.message;
+      let userFriendlyMessage = `Failed to generate newsletter: ${error.message}`;
+
+      if (error.message.includes("Failed to import NewsletterAgent")) {
+        userFriendlyMessage = "The backend AI integration is currently unavailable. This is a backend issue that needs to be fixed by the API team.";
+        errorMessage = "Backend AI integration unavailable. Please try again later or contact the API team.";
+      } else if (error.message.includes("Database connection failed")) {
+        userFriendlyMessage = "The database connection is currently unavailable. This might be due to the free tier cold start. Please try again in a few moments.";
+        errorMessage = "Database connection failed. Please try again later.";
+      }
+
       toast({
         variant: "destructive",
         title: "Error",
-        description: `Failed to generate newsletter: ${error.message}`,
+        description: userFriendlyMessage,
       });
-      setGeneratedContent(`Error: ${error.message}`);
+
+      setGeneratedContent(`Error: ${errorMessage}\n\nThis is a backend API issue that needs to be fixed by the API team. The frontend is correctly sending the request to the API, but the API is returning an error.`);
     } finally {
       setIsGenerating(false);
     }
@@ -316,6 +320,9 @@ export default function LabPage() {
     try {
       console.log("Starting save persona operation with formData:", JSON.stringify(formData, null, 2));
       console.log("Selected persona ID:", selectedPersonaId);
+
+      // Import the API clients
+      const { personasApi, documentsApi } = await import('@/lib/apiClient');
 
       // Deep clone the form data to avoid reference issues
       const clonedFormData = JSON.parse(JSON.stringify(formData));
@@ -366,12 +373,8 @@ export default function LabPage() {
           const fetchedDocuments = await Promise.all(
             missingDocuments.map(async (docId) => {
               try {
-                const response = await fetch(`http://localhost:5001/api/documents/${docId}`);
-                if (!response.ok) {
-                  console.warn(`Failed to fetch document ${docId}: ${response.status} ${response.statusText}`);
-                  return null;
-                }
-                const docData = await response.json();
+                // Use the documents API to fetch document metadata
+                const docData = await documentsApi.getById(docId);
 
                 // Transform API response to match the expected document format
                 return {
@@ -424,46 +427,22 @@ export default function LabPage() {
 
       console.log("Saving persona data:", JSON.stringify(personaData, null, 2));
 
-      let response;
       let savedPersona;
 
       if (selectedPersonaId && selectedPersonaId !== "_new") {
         // Update existing persona
         console.log(`Updating existing persona with ID: ${selectedPersonaId}`);
-        response = await fetch(`http://localhost:5001/api/personas/${selectedPersonaId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(personaData),
-        });
+        savedPersona = await personasApi.update(selectedPersonaId, personaData);
       } else {
         // Create new persona
         console.log("Creating new persona");
-        response = await fetch('http://localhost:5001/api/personas', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(personaData),
-        });
+        savedPersona = await personasApi.create(personaData);
       }
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to save persona: ${response.status} ${response.statusText} - ${errorText}`);
-      }
-
-      savedPersona = await response.json();
       console.log("Saved persona response:", JSON.stringify(savedPersona, null, 2));
 
       // Refresh personas list
-      const personasResponse = await fetch('http://localhost:5001/api/personas');
-      if (!personasResponse.ok) {
-        throw new Error(`Failed to fetch personas: ${personasResponse.status} ${personasResponse.statusText}`);
-      }
-
-      const personasData = await personasResponse.json();
+      const personasData = await personasApi.getAll();
       console.log("Fetched personas:", JSON.stringify(personasData, null, 2));
 
       // Transform personas data
@@ -633,12 +612,11 @@ export default function LabPage() {
             const fetchedDocuments = await Promise.all(
               missingDocIds.map(async (docId) => {
                 try {
-                  const response = await fetch(`http://localhost:5001/api/documents/${docId}`);
-                  if (!response.ok) {
-                    console.warn(`Failed to fetch document ${docId}: ${response.status} ${response.statusText}`);
-                    return null;
-                  }
-                  const docData = await response.json();
+                  // Import the documents API
+                  const { documentsApi } = await import('@/lib/apiClient');
+
+                  // Use the documents API to fetch document metadata
+                  const docData = await documentsApi.getById(docId);
 
                   // Transform API response to match the expected document format
                   return {

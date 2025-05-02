@@ -66,9 +66,12 @@ export default function ScrapingPackagesPage() {
         stats: pkg.stats || {}
       }));
 
+      // Import the personas API
+      const { personasApi } = await import('@/lib/apiClient');
+
       // Get personas from the API
       const [personasData, recipientsData] = await Promise.all([
-        fetch('http://localhost:5001/api/personas').then(res => res.json()).catch(err => {
+        personasApi.getAll().catch(err => {
           console.error('Error fetching personas:', err);
           return [];
         }),
@@ -222,31 +225,26 @@ export default function ScrapingPackagesPage() {
       setIsLoading(true);
       console.log('Creating persona with data:', formData);
 
+      // Import the personas API
+      const { personasApi } = await import('@/lib/apiClient');
+
       // Call the API to create the persona
-      const response = await fetch('http://localhost:5001/api/personas', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          description: formData.description,
-          // If using new schema with inputs
-          ...(formData.inputs ? { inputs: formData.inputs } : { prompt: formData.prompt })
-        }),
+      const newPersona = await personasApi.create({
+        name: formData.name,
+        description: formData.description,
+        // Include documents array if present
+        ...(formData.documents ? { documents: formData.documents } : {}),
+        // If using new schema with inputs
+        ...(formData.inputs ? { inputs: formData.inputs } : { prompt: formData.prompt })
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to create persona: ${response.statusText}`);
-      }
-
-      const newPersona = await response.json();
 
       // Transform response to match expected format
       const transformedPersona = {
         id: newPersona._id,
         name: newPersona.name,
         description: newPersona.description,
+        // Include documents array if present
+        documents: newPersona.documents || [],
         // Handle both old and new schema
         ...(newPersona.inputs ? { inputs: newPersona.inputs } : { prompt: newPersona.prompt }),
         status: newPersona.status || 'active',
@@ -270,31 +268,26 @@ export default function ScrapingPackagesPage() {
       setIsLoading(true);
       console.log('Updating persona with ID:', selectedPersona.id, 'Data:', formData);
 
+      // Import the personas API
+      const { personasApi } = await import('@/lib/apiClient');
+
       // Call the API to update the persona
-      const response = await fetch(`http://localhost:5001/api/personas/${selectedPersona.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          description: formData.description,
-          // If using new schema with inputs
-          ...(formData.inputs ? { inputs: formData.inputs } : { prompt: formData.prompt })
-        }),
+      const updatedPersona = await personasApi.update(selectedPersona.id, {
+        name: formData.name,
+        description: formData.description,
+        // Include documents array if present
+        ...(formData.documents ? { documents: formData.documents } : {}),
+        // If using new schema with inputs
+        ...(formData.inputs ? { inputs: formData.inputs } : { prompt: formData.prompt })
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to update persona: ${response.statusText}`);
-      }
-
-      const updatedPersona = await response.json();
 
       // Transform response to match expected format
       const transformedPersona = {
         id: updatedPersona._id,
         name: updatedPersona.name,
         description: updatedPersona.description,
+        // Include documents array if present
+        documents: updatedPersona.documents || [],
         // Handle both old and new schema
         ...(updatedPersona.inputs ? { inputs: updatedPersona.inputs } : { prompt: updatedPersona.prompt }),
         status: updatedPersona.status || 'active',
@@ -422,14 +415,11 @@ export default function ScrapingPackagesPage() {
       setIsLoading(true);
       console.log('Deleting persona with ID:', selectedPersona.id);
 
-      // Call the API directly to delete the persona
-      const response = await fetch(`http://localhost:5001/api/personas/${selectedPersona.id}`, {
-        method: 'DELETE',
-      });
+      // Import the personas API
+      const { personasApi } = await import('@/lib/apiClient');
 
-      if (!response.ok) {
-        throw new Error(`Failed to delete persona: ${response.statusText}`);
-      }
+      // Call the API directly to delete the persona
+      await personasApi.delete(selectedPersona.id);
 
       // Remove the persona from the local state
       const updatedPersonas = personas.filter(p => p.id !== selectedPersona.id);
