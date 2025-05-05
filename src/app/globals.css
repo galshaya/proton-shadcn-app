@@ -47,13 +47,13 @@
   /* Base colors */
   --background: 0 0% 0%;
   --foreground: 0 0% 100%;
-  
+
   /* Card and component colors */
   --card: 0 0% 7%;
   --card-foreground: 0 0% 100%;
   --popover: 0 0% 7%;
   --popover-foreground: 0 0% 100%;
-  
+
   /* UI element colors */
   --primary: 0 0% 100%;
   --primary-foreground: 0 0% 0%;
@@ -63,7 +63,7 @@
   --muted-foreground: 0 0% 65%;
   --accent: 215 76% 44%;
   --accent-foreground: 0 0% 100%;
-  
+
   /* Status colors */
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 0% 100%;
@@ -73,19 +73,19 @@
   --warning-foreground: 0 0% 0%;
   --info: 217 76% 44%;
   --info-foreground: 0 0% 100%;
-  
+
   /* Border, input, and UI detail colors */
   --border: 0 0% 15%;
   --input: 0 0% 15%;
   --ring: 0 0% 83.1%;
-  
+
   /* Chart colors */
   --chart-1: 142 76% 38%;
-  --chart-2: 217 76% 44%; 
+  --chart-2: 217 76% 44%;
   --chart-3: 38 92% 50%;
   --chart-4: 0 76% 50%;
   --chart-5: 270 76% 50%;
-  
+
   /* Border radius */
   --radius: 0.5rem;
 }
@@ -129,73 +129,107 @@
   * {
     @apply border-border;
   }
-  
+
   body {
     @apply bg-black text-white font-light;
   }
-  
+
   h1, h2, h3, h4, h5, h6 {
     @apply font-light text-white;
   }
-  
+
   p {
     @apply text-gray-400;
   }
-  
+
   /* Card styling */
   .card {
     @apply bg-[#111] border border-gray-800 rounded-lg p-6;
   }
-  
+
   /* Status badges */
   .badge-active {
     @apply bg-green-500 text-black text-xs px-3 py-0.5 rounded-full;
   }
-  
+
   .badge-archived {
     @apply bg-blue-700 text-white text-xs px-3 py-0.5 rounded-full;
   }
-  
+
   /* Table styling */
   table {
     @apply w-full text-left;
   }
-  
+
   thead {
     @apply border-b border-gray-800;
   }
-  
+
   tbody tr {
     @apply border-b border-gray-800 hover:bg-[#0a0a0a];
   }
-  
+
   th {
     @apply px-6 py-3 text-sm font-light text-gray-400;
   }
-  
+
   td {
     @apply px-6 py-4 text-sm;
   }
-  
+
   /* Search inputs */
   input[type="search"], input[type="text"] {
     @apply bg-[#111] border-gray-800 text-white rounded-md;
   }
-  
+
   /* Button styles */
   .btn-primary {
     @apply bg-white text-black hover:bg-gray-200;
   }
-  
+
   .btn-secondary {
     @apply bg-[#222] text-white hover:bg-[#333];
   }
-  
+
   .btn-outline {
     @apply border border-gray-700 bg-transparent text-white hover:bg-gray-800;
   }
-  
+
   .btn-danger {
     @apply bg-red-900/30 text-red-400 hover:bg-red-900/50;
+  }
+
+  /* Custom overflow wrapping for chat messages */
+  .overflow-wrap-anywhere {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  /* Markdown styling for chat */
+  .prose pre {
+    background-color: #1a1a1a;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    overflow-x: auto;
+  }
+
+  .prose code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.875rem;
+  }
+
+  .prose a {
+    color: #60a5fa;
+    text-decoration: none;
+  }
+
+  .prose a:hover {
+    text-decoration: underline;
+  }
+
+  .prose img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.375rem;
   }
 }

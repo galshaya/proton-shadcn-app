@@ -5,7 +5,7 @@
  */
 
 // Base URL for API requests - updated to use the deployed API on Render.com
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://proton-api-3k6g.onrender.com';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
 
 /**
  * Make a request to the API
@@ -28,9 +28,11 @@ async function apiRequest(endpoint, options = {}) {
       console.log('Request body:', options.body);
     }
 
+    // Use mode: 'cors' for cross-origin requests
     const response = await fetch(url, {
       ...options,
       headers,
+      mode: 'cors',
     });
 
     // Try to parse response as JSON
@@ -55,6 +57,31 @@ async function apiRequest(endpoint, options = {}) {
 
     return data;
   } catch (error) {
+    // Handle CORS errors specifically
+    if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+      console.error(`CORS or network error: ${error.message}`);
+
+      // Check if we're using the remote API
+      const isRemoteApi = API_BASE_URL.includes('render.com') || !API_BASE_URL.includes('localhost');
+
+      if (isRemoteApi) {
+        console.error(`
+          CORS issue detected with remote API.
+          Try switching to the local API by running:
+          npm run use-local-api
+        `);
+      } else {
+        console.error(`
+          Network error with local API.
+          Make sure your local API server is running on ${API_BASE_URL}.
+          Or switch to the remote API by running:
+          npm run use-remote-api
+        `);
+      }
+
+      throw new Error(`API connection error: ${error.message}. Check if the API server is running and accessible.`);
+    }
+
     console.error(`API request failed: ${error.message}`);
     throw error;
   }
@@ -237,13 +264,18 @@ export const newsletterApi = {
     // Log the model being used
     console.log(`Using ${requestData.model || 'default'} model for generation`);
 
-    // Add required parameters for web search with GPT-4.1
-    if (requestData.model === 'gpt-4.1') {
+    // Add required parameters for web search with compatible models
+    const webSearchCompatibleModels = ['gpt-4.1', 'gpt-4o', 'o3', 'o4-mini'];
+
+    // Extract use_web_search from inputs and remove inputs from requestData
+    const useWebSearch = requestData.inputs?.use_web_search || false;
+    delete requestData.inputs;
+
+    if (webSearchCompatibleModels.includes(requestData.model) && useWebSearch) {
       requestData.use_responses_api = true;
       requestData.use_web_search = true;
       requestData.web_search_preview = true;
-
-      console.log('Enabling web search for GPT-4.1');
+      console.log(`Enabling web search for ${requestData.model}`);
     }
 
     // Add required parameter for Claude models
@@ -398,7 +430,8 @@ export const enhancedNewsletterApi = {
       model = 'gpt-4o',
       searchQuery,
       clientContext,
-      projectContext
+      projectContext,
+      useWebSearch = false
     } = params;
 
     // Create request object with all necessary parameters
@@ -418,13 +451,14 @@ export const enhancedNewsletterApi = {
     // Log the model being used
     console.log(`Using ${model || 'default'} model for generation with documents`);
 
-    // Add required parameters for web search with GPT-4.1
-    if (model === 'gpt-4.1') {
+    // Add required parameters for web search with compatible models
+    const webSearchCompatibleModels = ['gpt-4.1', 'gpt-4o', 'o3', 'o4-mini'];
+
+    if (webSearchCompatibleModels.includes(model) && useWebSearch) {
       requestData.use_responses_api = true;
       requestData.use_web_search = true;
       requestData.web_search_preview = true;
-
-      console.log('Enabling web search for GPT-4.1');
+      console.log(`Enabling web search for ${model}`);
     }
 
     // Add required parameter for Claude models
@@ -464,6 +498,115 @@ export const enhancedNewsletterApi = {
   },
 };
 
+/**
+ * Chat API
+ */
+export const chatApi = {
+  /**
+   * Send a chat message
+   * @param {Object} params - Chat parameters
+   * @param {string} params.message - User message
+   * @param {Array<string>} params.documentIds - Document IDs to include in context
+   * @param {Array<string>} params.packageIds - Scraping package IDs to include in context
+   * @param {string} params.model - Model to use (default: gpt-4o)
+   * @param {string} params.clientContext - Optional client context
+   * @param {string} params.projectContext - Optional project context
+   * @param {boolean} params.useWebSearch - Whether to use web search (for compatible models)
+   * @returns {Promise<Object>} - AI response
+   */
+  sendMessage: async (params) => {
+    const {
+      message,
+      documentIds = [],
+      packageIds = [],
+      model = 'gpt-4o',
+      clientContext = '',
+      projectContext = '',
+      useWebSearch = false
+    } = params;
+
+    // Create request object with all necessary parameters
+    const requestData = {
+      model,
+      document_ids: documentIds,
+      package_ids: packageIds, // This is the correct field name for the API
+      prompt: message,
+      client_context: clientContext,
+      project_context: projectContext
+    };
+
+    // Log the actual request data that will be sent
+    console.log('Request data being prepared:', requestData);
+
+    // Debug log for package IDs in API client
+    console.log('Chat API received package IDs:', packageIds);
+
+    // Ensure package_ids is an array
+    if (packageIds && !Array.isArray(packageIds)) {
+      console.error('packageIds is not an array:', packageIds);
+      requestData.package_ids = [];
+    } else if (packageIds && packageIds.length > 0) {
+      console.log('Using package IDs in request:', packageIds);
+    }
+
+    // Log the model being used
+    console.log(`Using ${model || 'default'} model for chat`);
+
+    // Add required parameters for web search with compatible models
+    const webSearchCompatibleModels = ['gpt-4.1', 'gpt-4o', 'o3', 'o4-mini'];
+
+    if (webSearchCompatibleModels.includes(model) && useWebSearch) {
+      requestData.use_responses_api = true;
+      requestData.use_web_search = true;
+      requestData.web_search_preview = true;
+      console.log(`Enabling web search for ${model}`);
+    }
+
+    // Add required parameter for Claude models
+    if (model && model.includes('claude')) {
+      requestData.use_anthropic = true;
+
+      // Map newer Claude model IDs to the format that the backend expects
+      if (model === 'claude-3-7-sonnet-20250219') {
+        // Try the latest model first, but provide a fallback
+        try {
+          console.log('Trying latest Claude 3.7 Sonnet model');
+          requestData.claude_model = 'claude-3-7-sonnet-20250219';
+        } catch (error) {
+          console.log('Falling back to Claude 3 Sonnet');
+          requestData.model = 'claude-3-sonnet-20240229';
+        }
+      } else if (model === 'claude-3-5-sonnet-20241022') {
+        // Try the latest model first, but provide a fallback
+        try {
+          console.log('Trying latest Claude 3.5 Sonnet model');
+          requestData.claude_model = 'claude-3-5-sonnet-20241022';
+        } catch (error) {
+          console.log('Falling back to Claude 3 Opus');
+          requestData.model = 'claude-3-opus-20240229';
+        }
+      }
+
+      console.log('Enabling Anthropic API for Claude model:', requestData.model);
+    }
+
+    // Final check of package_ids before sending
+    console.log('Final package_ids in request:', requestData.package_ids);
+
+    console.log('Sending chat message:', JSON.stringify(requestData, null, 2));
+
+    // Use the same endpoint as newsletter generation since the backend
+    // doesn't have a dedicated chat endpoint yet
+    const finalRequestBody = JSON.stringify(requestData);
+    console.log('Final request body as string:', finalRequestBody);
+
+    return apiRequest('/api/newsletter/generate', {
+      method: 'POST',
+      body: finalRequestBody,
+    });
+  }
+};
+
 // Extend the newsletter API with the enhanced methods
 Object.assign(newsletterApi, enhancedNewsletterApi);
 
@@ -474,4 +617,5 @@ export default {
   newsletter: newsletterApi,
   documents: documentsApi,
   health: healthApi,
+  chat: chatApi,
 };

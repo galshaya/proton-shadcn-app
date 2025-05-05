@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Trash, RefreshCw, X } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
@@ -558,12 +559,9 @@ export function SharedPersonaForm({
               <Select
                 value={formData.inputs.model_name}
                 onValueChange={(value) => {
-                  // Map GPT-4.1-web to GPT-4.1 for backend compatibility
-                  const modelValue = value === 'gpt-4.1-web' ? 'gpt-4.1' : value;
-
                   handleFieldChange({
                     ...formData,
-                    inputs: { ...formData.inputs, model_name: modelValue }
+                    inputs: { ...formData.inputs, model_name: value }
                   });
                 }}
               >
@@ -571,23 +569,43 @@ export function SharedPersonaForm({
                   <SelectValue placeholder="Select model" />
                 </SelectTrigger>
                 <SelectContent className="bg-[#111] border-gray-800 text-white">
+                  {/* OpenAI Models - Newest First */}
                   <SelectItem value="gpt-4.1" className="focus:bg-gray-800 focus:text-white">GPT-4.1</SelectItem>
-                  <SelectItem value="gpt-4.1-web" className="focus:bg-gray-800 focus:text-white">GPT-4.1 (Web)</SelectItem>
+                  <SelectItem value="o4-mini" className="focus:bg-gray-800 focus:text-white">o4-mini</SelectItem>
                   <SelectItem value="gpt-4o" className="focus:bg-gray-800 focus:text-white">GPT-4o</SelectItem>
-                  <SelectItem value="gpt-4o-web" className="focus:bg-gray-800 focus:text-white">GPT-4o (Web)</SelectItem>
-                  <SelectItem value="gpt-4-turbo" className="focus:bg-gray-800 focus:text-white">GPT-4 Turbo</SelectItem>
-                  <SelectItem value="gpt-4-turbo-web" className="focus:bg-gray-800 focus:text-white">GPT-4 Turbo (Web)</SelectItem>
-                  <SelectItem value="gpt-3.5-turbo" className="focus:bg-gray-800 focus:text-white">GPT-3.5 Turbo</SelectItem>
-                  {/* Latest Claude models */}
-                  <SelectItem value="claude-3-7-sonnet-20250219" className="focus:bg-gray-800 focus:text-white">Claude 3.7 Sonnet (Latest)</SelectItem>
-                  <SelectItem value="claude-3-5-sonnet-20241022" className="focus:bg-gray-800 focus:text-white">Claude 3.5 Sonnet (Latest)</SelectItem>
+                  <SelectItem value="o3" className="focus:bg-gray-800 focus:text-white">o3</SelectItem>
 
-                  {/* Older Claude models that might be compatible with the backend */}
+                  {/* Claude Models - Newest First */}
+                  <SelectItem value="claude-3-7-sonnet-20250219" className="focus:bg-gray-800 focus:text-white">Claude 3.7 Sonnet</SelectItem>
+                  <SelectItem value="claude-3-5-sonnet-20241022" className="focus:bg-gray-800 focus:text-white">Claude 3.5 Sonnet</SelectItem>
                   <SelectItem value="claude-3-sonnet-20240229" className="focus:bg-gray-800 focus:text-white">Claude 3 Sonnet</SelectItem>
                   <SelectItem value="claude-3-opus-20240229" className="focus:bg-gray-800 focus:text-white">Claude 3 Opus</SelectItem>
                   <SelectItem value="claude-3-haiku-20240307" className="focus:bg-gray-800 focus:text-white">Claude 3 Haiku</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Web Search Checkbox - Only enabled for compatible models */}
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="use_web_search"
+                  checked={formData.inputs.use_web_search || false}
+                  onCheckedChange={(checked) => {
+                    handleFieldChange({
+                      ...formData,
+                      inputs: { ...formData.inputs, use_web_search: checked }
+                    });
+                  }}
+                  disabled={!['gpt-4.1', 'gpt-4o', 'o3', 'o4-mini'].includes(formData.inputs.model_name)}
+                />
+                <Label
+                  htmlFor="use_web_search"
+                  className={`text-sm font-light ${['gpt-4.1', 'gpt-4o', 'o3', 'o4-mini'].includes(formData.inputs.model_name) ? 'text-gray-300' : 'text-gray-500'}`}
+                >
+                  Enable Web Search
+                </Label>
+              </div>
             </div>
 
             <div className="space-y-2">

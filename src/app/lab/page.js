@@ -234,7 +234,10 @@ export default function LabPage() {
         project_context: formData.inputs.project_context || "",
         prompt: formData.inputs.prompt || "",
         package_ids: package_ids,
-        document_ids: document_ids // This is the key field - just pass the IDs
+        document_ids: document_ids, // This is the key field - just pass the IDs
+        inputs: {
+          use_web_search: formData.inputs.use_web_search || false
+        }
       };
 
       // The API client will handle model-specific parameters

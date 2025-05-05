@@ -67,6 +67,17 @@ export function MainNav() {
             AI Lab
           </Link>
         </li>
+        <li>
+          <Link
+            href="/chat"
+            className={cn(
+              "text-sm font-medium transition-colors hover:text-white",
+              pathname.startsWith("/chat") ? "text-white" : "text-gray-400"
+            )}
+          >
+            Proton Chat
+          </Link>
+        </li>
       </ul>
     </nav>
   )
