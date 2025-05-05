@@ -237,6 +237,10 @@ export default function LabPage() {
         document_ids: document_ids // This is the key field - just pass the IDs
       };
 
+      // The API client will handle model-specific parameters
+      // We don't need to add them here anymore, as the API client will check
+      // if the backend supports these features before adding them
+
       console.log("Sending request data to API:", JSON.stringify(requestData, null, 2));
 
       // Use the API client to generate the newsletter
@@ -299,6 +303,9 @@ export default function LabPage() {
       } else if (error.message.includes("Database connection failed")) {
         userFriendlyMessage = "The database connection is currently unavailable. This might be due to the free tier cold start. Please try again in a few moments.";
         errorMessage = "Database connection failed. Please try again later.";
+      } else if (error.message.includes("unexpected keyword argument")) {
+        userFriendlyMessage = "The backend API doesn't support some of the parameters we're sending. This is a backend issue that needs to be fixed by the API team.";
+        errorMessage = "API parameter mismatch. The backend API needs to be updated to support the latest features.";
       }
 
       toast({

@@ -230,10 +230,57 @@ export const newsletterApi = {
    * @param {Object} data - Newsletter generation parameters
    * @returns {Promise<Object>} - Generated newsletter
    */
-  generate: (data) => apiRequest('/api/newsletter/generate', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
+  generate: async (data) => {
+    // Prepare the request data based on the model
+    const requestData = { ...data };
+
+    // Log the model being used
+    console.log(`Using ${requestData.model || 'default'} model for generation`);
+
+    // Add required parameters for web search with GPT-4.1
+    if (requestData.model === 'gpt-4.1') {
+      requestData.use_responses_api = true;
+      requestData.use_web_search = true;
+      requestData.web_search_preview = true;
+
+      console.log('Enabling web search for GPT-4.1');
+    }
+
+    // Add required parameter for Claude models
+    if (requestData.model && requestData.model.includes('claude')) {
+      requestData.use_anthropic = true;
+
+      // Map newer Claude model IDs to the format that the backend expects
+      if (requestData.model === 'claude-3-7-sonnet-20250219') {
+        // Try the latest model first, but provide a fallback
+        try {
+          console.log('Trying latest Claude 3.7 Sonnet model');
+          requestData.claude_model = 'claude-3-7-sonnet-20250219';
+        } catch (error) {
+          console.log('Falling back to Claude 3 Sonnet');
+          requestData.model = 'claude-3-sonnet-20240229';
+        }
+      } else if (requestData.model === 'claude-3-5-sonnet-20241022') {
+        // Try the latest model first, but provide a fallback
+        try {
+          console.log('Trying latest Claude 3.5 Sonnet model');
+          requestData.claude_model = 'claude-3-5-sonnet-20241022';
+        } catch (error) {
+          console.log('Falling back to Claude 3 Opus');
+          requestData.model = 'claude-3-opus-20240229';
+        }
+      }
+
+      console.log('Enabling Anthropic API for Claude model:', requestData.model);
+    }
+
+    console.log('Generating newsletter with data:', JSON.stringify(requestData, null, 2));
+
+    return apiRequest('/api/newsletter/generate', {
+      method: 'POST',
+      body: JSON.stringify(requestData),
+    });
+  },
 };
 
 /**
@@ -338,24 +385,81 @@ export const enhancedNewsletterApi = {
    * @param {Array<string>} params.documentIds - Document IDs to include
    * @param {string} params.model - Model to use (default: gpt-4o)
    * @param {string} params.personaId - Optional persona ID
+   * @param {string} params.searchQuery - Optional search query for web search
+   * @param {string} params.clientContext - Optional client context
+   * @param {string} params.projectContext - Optional project context
    * @returns {Promise<Object>} - Generated newsletter
    */
-  generateWithDocuments: (params) => {
-    const { prompt, documentIds, personaId, model = 'gpt-4o' } = params;
+  generateWithDocuments: async (params) => {
+    const {
+      prompt,
+      documentIds,
+      personaId,
+      model = 'gpt-4o',
+      searchQuery,
+      clientContext,
+      projectContext
+    } = params;
 
-    const data = {
+    // Create request object with all necessary parameters
+    const requestData = {
       model,
       document_ids: documentIds,
       prompt,
+      search_query: searchQuery,
+      client_context: clientContext,
+      project_context: projectContext
     };
 
     if (personaId) {
-      data.persona_id = personaId;
+      requestData.persona_id = personaId;
     }
+
+    // Log the model being used
+    console.log(`Using ${model || 'default'} model for generation with documents`);
+
+    // Add required parameters for web search with GPT-4.1
+    if (model === 'gpt-4.1') {
+      requestData.use_responses_api = true;
+      requestData.use_web_search = true;
+      requestData.web_search_preview = true;
+
+      console.log('Enabling web search for GPT-4.1');
+    }
+
+    // Add required parameter for Claude models
+    if (model && model.includes('claude')) {
+      requestData.use_anthropic = true;
+
+      // Map newer Claude model IDs to the format that the backend expects
+      if (model === 'claude-3-7-sonnet-20250219') {
+        // Try the latest model first, but provide a fallback
+        try {
+          console.log('Trying latest Claude 3.7 Sonnet model');
+          requestData.claude_model = 'claude-3-7-sonnet-20250219';
+        } catch (error) {
+          console.log('Falling back to Claude 3 Sonnet');
+          requestData.model = 'claude-3-sonnet-20240229';
+        }
+      } else if (model === 'claude-3-5-sonnet-20241022') {
+        // Try the latest model first, but provide a fallback
+        try {
+          console.log('Trying latest Claude 3.5 Sonnet model');
+          requestData.claude_model = 'claude-3-5-sonnet-20241022';
+        } catch (error) {
+          console.log('Falling back to Claude 3 Opus');
+          requestData.model = 'claude-3-opus-20240229';
+        }
+      }
+
+      console.log('Enabling Anthropic API for Claude model:', requestData.model);
+    }
+
+    console.log('Generating newsletter with documents:', JSON.stringify(requestData, null, 2));
 
     return apiRequest('/api/newsletter/generate', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(requestData),
     });
   },
 };

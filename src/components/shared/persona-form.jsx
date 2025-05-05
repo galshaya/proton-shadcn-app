@@ -90,6 +90,9 @@ export function SharedPersonaForm({
   const [dragActive, setDragActive] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
 
+  // Auto-apply state
+  const [autoApplyTimeout, setAutoApplyTimeout] = useState(null)
+
   // Filter available recipients
   const availableRecipients = recipients.filter(
     (recipient) => !formData.selectedRecipients.includes(recipient.id)
@@ -209,26 +212,72 @@ export function SharedPersonaForm({
     }
 
     console.log("Submitting formatted data:", formattedData);
-    onSubmit(formattedData)
+
+    // Submit the form data to the parent component
+    onSubmit(formattedData);
+
+    // If this is not an embedded form and we're in edit mode (persona exists),
+    // automatically close the form or modal
+    if (!embedded && persona) {
+      if (onCancel) {
+        onCancel();
+      }
+    }
   }
 
-  // We'll rely on explicit form submission instead of auto-updating
+  // Auto-apply changes when fields are modified
+  const handleFieldChange = (newFormData) => {
+    setFormData(newFormData);
+
+    // If this is not an embedded form, auto-apply changes
+    if (!embedded) {
+      // Create a debounced version of the submit function
+      if (autoApplyTimeout) {
+        clearTimeout(autoApplyTimeout);
+      }
+
+      // Set a timeout to auto-apply changes after 500ms of inactivity
+      const timeout = setTimeout(() => {
+        const formattedData = {
+          ...newFormData,
+          documents: newFormData.documents.map(doc => ({
+            id: doc.id,
+            name: doc.name,
+            type: doc.type,
+            uploadedAt: doc.uploadedAt
+          })),
+          inputs: {
+            ...newFormData.inputs,
+            // Ensure package_ids is always an array
+            package_ids: Array.isArray(newFormData.inputs.package_ids) ? newFormData.inputs.package_ids : []
+          }
+        };
+
+        console.log("Auto-applying changes:", formattedData);
+        onSubmit(formattedData);
+      }, 500);
+
+      setAutoApplyTimeout(timeout);
+    }
+  };
 
   // Handle recipient management
   const handleAddRecipient = (recipientId) => {
-    setFormData({
+    const updatedFormData = {
       ...formData,
       selectedRecipients: [...formData.selectedRecipients, recipientId],
-    })
+    };
+    handleFieldChange(updatedFormData);
   }
 
   const handleRemoveRecipient = (recipientId) => {
-    setFormData({
+    const updatedFormData = {
       ...formData,
       selectedRecipients: formData.selectedRecipients.filter(
         (id) => id !== recipientId
       ),
-    })
+    };
+    handleFieldChange(updatedFormData);
   }
 
   // File upload handlers
@@ -322,7 +371,7 @@ export function SharedPersonaForm({
     console.log("Selected documents:", selectedDocs);
 
     // Add to form data
-    setFormData(prevData => {
+    const newFormData = prevData => {
       // Filter out documents that are already in the form
       const newDocs = selectedDocs.filter(doc => !prevData.documents.some(d => d.id === doc.id))
 
@@ -345,7 +394,11 @@ export function SharedPersonaForm({
           document_ids: [...currentDocIds, ...newDocIds]
         }
       };
-    });
+    };
+
+    // Update form data and auto-apply changes
+    const updatedFormData = newFormData(formData);
+    handleFieldChange(updatedFormData);
 
     // Close document selector
     setShowDocumentSelector(false)
@@ -360,7 +413,7 @@ export function SharedPersonaForm({
   const handleRemoveDocument = (docId) => {
     console.log("Removing document with ID:", docId);
 
-    setFormData(prevData => {
+    const newFormData = prevData => {
       // Ensure document_ids is always an array
       const currentDocIds = Array.isArray(prevData.inputs.document_ids)
         ? prevData.inputs.document_ids
@@ -376,7 +429,11 @@ export function SharedPersonaForm({
           document_ids: currentDocIds.filter(id => id !== docId)
         }
       };
-    });
+    };
+
+    // Update form data and auto-apply changes
+    const updatedFormData = newFormData(formData);
+    handleFieldChange(updatedFormData);
 
     toast({
       title: "Document Removed",
@@ -413,7 +470,7 @@ export function SharedPersonaForm({
       }
 
       // Add to form data
-      setFormData(prevData => {
+      const newFormData = prevData => {
         // Ensure document_ids is always an array
         const currentDocIds = Array.isArray(prevData.inputs.document_ids)
           ? prevData.inputs.document_ids
@@ -430,7 +487,11 @@ export function SharedPersonaForm({
             document_ids: [...currentDocIds, ...uploadedDocIds]
           }
         };
-      })
+      };
+
+      // Update form data and auto-apply changes
+      const updatedFormData = newFormData(formData);
+      handleFieldChange(updatedFormData);
 
       // Clear uploaded files
       setUploadedFiles([])
@@ -469,7 +530,7 @@ export function SharedPersonaForm({
             id="name"
             placeholder="Enter persona name"
             value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            onChange={(e) => handleFieldChange({ ...formData, name: e.target.value })}
             required
             className="bg-[#111] border-gray-800 text-white placeholder:text-gray-500 focus:border-gray-700 focus:ring-0"
           />
@@ -481,7 +542,7 @@ export function SharedPersonaForm({
             id="description"
             placeholder="Enter persona description"
             value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            onChange={(e) => handleFieldChange({ ...formData, description: e.target.value })}
             required
             className="bg-[#111] border-gray-800 text-white placeholder:text-gray-500 focus:border-gray-700 focus:ring-0"
           />
@@ -496,10 +557,15 @@ export function SharedPersonaForm({
               <Label htmlFor="model_name" className="text-gray-300 font-light">Model</Label>
               <Select
                 value={formData.inputs.model_name}
-                onValueChange={(value) => setFormData({
-                  ...formData,
-                  inputs: { ...formData.inputs, model_name: value }
-                })}
+                onValueChange={(value) => {
+                  // Map GPT-4.1-web to GPT-4.1 for backend compatibility
+                  const modelValue = value === 'gpt-4.1-web' ? 'gpt-4.1' : value;
+
+                  handleFieldChange({
+                    ...formData,
+                    inputs: { ...formData.inputs, model_name: modelValue }
+                  });
+                }}
               >
                 <SelectTrigger id="model_name" className="bg-[#111] border-gray-800 text-white focus:ring-0 focus:border-gray-700">
                   <SelectValue placeholder="Select model" />
@@ -512,9 +578,14 @@ export function SharedPersonaForm({
                   <SelectItem value="gpt-4-turbo" className="focus:bg-gray-800 focus:text-white">GPT-4 Turbo</SelectItem>
                   <SelectItem value="gpt-4-turbo-web" className="focus:bg-gray-800 focus:text-white">GPT-4 Turbo (Web)</SelectItem>
                   <SelectItem value="gpt-3.5-turbo" className="focus:bg-gray-800 focus:text-white">GPT-3.5 Turbo</SelectItem>
-                  <SelectItem value="claude-3-7-sonnet-20250219" className="focus:bg-gray-800 focus:text-white">Claude 3.7 Sonnet</SelectItem>
-                  <SelectItem value="claude-3-5-sonnet-20241022" className="focus:bg-gray-800 focus:text-white">Claude 3.5 Sonnet</SelectItem>
+                  {/* Latest Claude models */}
+                  <SelectItem value="claude-3-7-sonnet-20250219" className="focus:bg-gray-800 focus:text-white">Claude 3.7 Sonnet (Latest)</SelectItem>
+                  <SelectItem value="claude-3-5-sonnet-20241022" className="focus:bg-gray-800 focus:text-white">Claude 3.5 Sonnet (Latest)</SelectItem>
+
+                  {/* Older Claude models that might be compatible with the backend */}
+                  <SelectItem value="claude-3-sonnet-20240229" className="focus:bg-gray-800 focus:text-white">Claude 3 Sonnet</SelectItem>
                   <SelectItem value="claude-3-opus-20240229" className="focus:bg-gray-800 focus:text-white">Claude 3 Opus</SelectItem>
+                  <SelectItem value="claude-3-haiku-20240307" className="focus:bg-gray-800 focus:text-white">Claude 3 Haiku</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -523,7 +594,7 @@ export function SharedPersonaForm({
               <Label htmlFor="date_range" className="text-gray-300 font-light">Date Range</Label>
               <Select
                 value={formData.inputs.date_range}
-                onValueChange={(value) => setFormData({
+                onValueChange={(value) => handleFieldChange({
                   ...formData,
                   inputs: { ...formData.inputs, date_range: value }
                 })}
@@ -547,7 +618,7 @@ export function SharedPersonaForm({
               id="search_query"
               placeholder="Enter search terms (e.g., AI, MCP, Agents)"
               value={formData.inputs.search_query}
-              onChange={(e) => setFormData({
+              onChange={(e) => handleFieldChange({
                 ...formData,
                 inputs: { ...formData.inputs, search_query: e.target.value }
               })}
@@ -562,7 +633,7 @@ export function SharedPersonaForm({
               id="client_context"
               placeholder="Enter client context information"
               value={formData.inputs.client_context}
-              onChange={(e) => setFormData({
+              onChange={(e) => handleFieldChange({
                 ...formData,
                 inputs: { ...formData.inputs, client_context: e.target.value }
               })}
@@ -577,7 +648,7 @@ export function SharedPersonaForm({
               id="project_context"
               placeholder="Enter project context information"
               value={formData.inputs.project_context}
-              onChange={(e) => setFormData({
+              onChange={(e) => handleFieldChange({
                 ...formData,
                 inputs: { ...formData.inputs, project_context: e.target.value }
               })}
@@ -592,7 +663,7 @@ export function SharedPersonaForm({
               id="prompt"
               placeholder="Enter detailed prompt for the newsletter"
               value={formData.inputs.prompt}
-              onChange={(e) => setFormData({
+              onChange={(e) => handleFieldChange({
                 ...formData,
                 inputs: { ...formData.inputs, prompt: e.target.value }
               })}
@@ -914,36 +985,12 @@ export function SharedPersonaForm({
         )}
         {!embedded && (
           <button
-            type="button"
-            onClick={() => {
-              // Manually trigger form submission to update parent state
-              const formattedData = {
-                ...formData,
-                documents: formData.documents.map(doc => ({
-                  id: doc.id,
-                  name: doc.name,
-                  type: doc.type,
-                  uploadedAt: doc.uploadedAt
-                })),
-                inputs: {
-                  ...formData.inputs,
-                  // Ensure package_ids is always an array
-                  package_ids: Array.isArray(formData.inputs.package_ids) ? formData.inputs.package_ids : []
-                }
-              };
-              onSubmit(formattedData);
-            }}
-            className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white h-9 px-4 py-2"
+            type="submit"
+            className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-white text-black hover:bg-gray-200 font-light h-9 px-4 py-2"
           >
-            Apply Changes
+            {persona ? "Save Persona" : "Create Persona"}
           </button>
         )}
-        <button
-          type="submit"
-          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-white text-black hover:bg-gray-200 font-light h-9 px-4 py-2"
-        >
-          {persona ? "Update Persona" : "Create Persona"}
-        </button>
       </div>
     </form>
   )

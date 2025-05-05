@@ -6,7 +6,10 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "toggle-api": "node toggle-api.js",
+    "use-local-api": "node -e \"require('fs').writeFileSync('.env.local', '# API URL\\nNEXT_PUBLIC_API_URL=http://localhost:5001\\n')\" && echo 'Switched to local API'",
+    "use-remote-api": "node -e \"require('fs').writeFileSync('.env.local', '# API URL\\nNEXT_PUBLIC_API_URL=https://proton-api-3k6g.onrender.com\\n')\" && echo 'Switched to remote API'"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.6",
