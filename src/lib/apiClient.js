@@ -283,27 +283,17 @@ export const newsletterApi = {
       requestData.use_anthropic = true;
 
       // Map newer Claude model IDs to the format that the backend expects
+      // Store the original model name for logging
+      const originalModel = requestData.model;
+
+      // Map model names to the correct format
       if (requestData.model === 'claude-3-7-sonnet-20250219') {
-        // Try the latest model first, but provide a fallback
-        try {
-          console.log('Trying latest Claude 3.7 Sonnet model');
-          requestData.claude_model = 'claude-3-7-sonnet-20250219';
-        } catch (error) {
-          console.log('Falling back to Claude 3 Sonnet');
-          requestData.model = 'claude-3-sonnet-20240229';
-        }
+        requestData.model = 'claude-3-sonnet-20240229'; // Use the compatible model name
       } else if (requestData.model === 'claude-3-5-sonnet-20241022') {
-        // Try the latest model first, but provide a fallback
-        try {
-          console.log('Trying latest Claude 3.5 Sonnet model');
-          requestData.claude_model = 'claude-3-5-sonnet-20241022';
-        } catch (error) {
-          console.log('Falling back to Claude 3 Opus');
-          requestData.model = 'claude-3-opus-20240229';
-        }
+        requestData.model = 'claude-3-opus-20240229'; // Use the compatible model name
       }
 
-      console.log('Enabling Anthropic API for Claude model:', requestData.model);
+      console.log(`Enabling Anthropic API: mapped ${originalModel} to ${requestData.model}`);
     }
 
     console.log('Generating newsletter with data:', JSON.stringify(requestData, null, 2));
@@ -466,27 +456,19 @@ export const enhancedNewsletterApi = {
       requestData.use_anthropic = true;
 
       // Map newer Claude model IDs to the format that the backend expects
+      // Store the original model name for logging
+      const originalModel = model;
+
+      // Map model names to the correct format
       if (model === 'claude-3-7-sonnet-20250219') {
-        // Try the latest model first, but provide a fallback
-        try {
-          console.log('Trying latest Claude 3.7 Sonnet model');
-          requestData.claude_model = 'claude-3-7-sonnet-20250219';
-        } catch (error) {
-          console.log('Falling back to Claude 3 Sonnet');
-          requestData.model = 'claude-3-sonnet-20240229';
-        }
+        requestData.model = 'claude-3-sonnet-20240229'; // Use the compatible model name
       } else if (model === 'claude-3-5-sonnet-20241022') {
-        // Try the latest model first, but provide a fallback
-        try {
-          console.log('Trying latest Claude 3.5 Sonnet model');
-          requestData.claude_model = 'claude-3-5-sonnet-20241022';
-        } catch (error) {
-          console.log('Falling back to Claude 3 Opus');
-          requestData.model = 'claude-3-opus-20240229';
-        }
+        requestData.model = 'claude-3-opus-20240229'; // Use the compatible model name
+      } else {
+        requestData.model = model; // Keep the original model name
       }
 
-      console.log('Enabling Anthropic API for Claude model:', requestData.model);
+      console.log(`Enabling Anthropic API: mapped ${originalModel} to ${requestData.model}`);
     }
 
     console.log('Generating newsletter with documents:', JSON.stringify(requestData, null, 2));
@@ -567,27 +549,19 @@ export const chatApi = {
       requestData.use_anthropic = true;
 
       // Map newer Claude model IDs to the format that the backend expects
+      // Store the original model name for logging
+      const originalModel = model;
+
+      // Map model names to the correct format
       if (model === 'claude-3-7-sonnet-20250219') {
-        // Try the latest model first, but provide a fallback
-        try {
-          console.log('Trying latest Claude 3.7 Sonnet model');
-          requestData.claude_model = 'claude-3-7-sonnet-20250219';
-        } catch (error) {
-          console.log('Falling back to Claude 3 Sonnet');
-          requestData.model = 'claude-3-sonnet-20240229';
-        }
+        requestData.model = 'claude-3-sonnet-20240229'; // Use the compatible model name
       } else if (model === 'claude-3-5-sonnet-20241022') {
-        // Try the latest model first, but provide a fallback
-        try {
-          console.log('Trying latest Claude 3.5 Sonnet model');
-          requestData.claude_model = 'claude-3-5-sonnet-20241022';
-        } catch (error) {
-          console.log('Falling back to Claude 3 Opus');
-          requestData.model = 'claude-3-opus-20240229';
-        }
+        requestData.model = 'claude-3-opus-20240229'; // Use the compatible model name
+      } else {
+        requestData.model = model; // Keep the original model name
       }
 
-      console.log('Enabling Anthropic API for Claude model:', requestData.model);
+      console.log(`Enabling Anthropic API: mapped ${originalModel} to ${requestData.model}`);
     }
 
     // Final check of package_ids before sending
