@@ -8,6 +8,82 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
 
 /**
+ * Normalize MongoDB objects by ensuring consistent ID access
+ * @param {Object|Array} data - Data to normalize (single object or array of objects)
+ * @returns {Object|Array} - Normalized data
+ */
+function normalizeIds(data) {
+  // If data is null or undefined, return it as is
+  if (data == null) return data;
+
+  // If data is an array, normalize each item
+  if (Array.isArray(data)) {
+    return data.map(item => normalizeIds(item));
+  }
+
+  // If data is an object with _id, add id property
+  if (typeof data === 'object' && data._id) {
+    // Create a new object to avoid mutating the original
+    return {
+      ...data,
+      // Keep _id for React keys and add id for consistent access
+      id: data.id || data._id
+    };
+  }
+
+  // Return other data types as is
+  return data;
+}
+
+/**
+ * Check API health
+ * @returns {Promise<boolean>} - True if API is healthy
+ */
+async function checkApiHealth() {
+  try {
+    const url = `${API_BASE_URL}/api/health`;
+    const response = await fetch(url, {
+      method: 'GET',
+      mode: 'cors',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return data.status === 'ok' || data.status === 'healthy';
+    }
+    return false;
+  } catch (error) {
+    console.error('Health check failed:', error);
+    return false;
+  }
+}
+
+/**
+ * Poll API health until it's healthy or max attempts reached
+ * @param {number} maxAttempts - Maximum number of polling attempts
+ * @param {number} interval - Polling interval in milliseconds
+ * @returns {Promise<boolean>} - True if API becomes healthy
+ */
+async function pollApiHealth(maxAttempts = 5, interval = 2000) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    console.log(`Health check attempt ${attempt + 1}/${maxAttempts}...`);
+    const isHealthy = await checkApiHealth();
+
+    if (isHealthy) {
+      console.log('API is now healthy');
+      return true;
+    }
+
+    // Wait before next attempt
+    await new Promise(resolve => setTimeout(resolve, interval));
+  }
+
+  console.log('Max health check attempts reached, API still unhealthy');
+  return false;
+}
+
+/**
  * Make a request to the API
  * @param {string} endpoint - API endpoint
  * @param {Object} options - Fetch options
@@ -50,12 +126,37 @@ async function apiRequest(endpoint, options = {}) {
     console.log('Response status:', response.status);
     console.log('Response data:', data);
 
+    // Handle 503 Service Unavailable specifically
+    if (response.status === 503) {
+      console.log('Database appears to be offline (503), polling health endpoint...');
+      // Start polling health endpoint in the background
+      pollApiHealth().then(isHealthy => {
+        if (isHealthy) {
+          console.log('Database is back online');
+          // Could dispatch an event or update global state here
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('api-health-restored'));
+          }
+        }
+      });
+
+      throw new Error('Database is currently offline. Please try again in a few moments.');
+    }
+
     // Check for error response
     if (!response.ok) {
       throw new Error(data.error || data.message || `API error: ${response.status}`);
     }
 
-    return data;
+    // Normalize IDs in the response data
+    const normalizedData = normalizeIds(data);
+
+    // For list endpoints, check if the result is empty
+    if (Array.isArray(normalizedData) && normalizedData.length === 0) {
+      console.log('API returned an empty list');
+    }
+
+    return normalizedData;
   } catch (error) {
     // Handle CORS errors specifically
     if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
@@ -95,21 +196,43 @@ export const scrapingPackagesApi = {
    * Get all scraping packages
    * @returns {Promise<Array>} - List of scraping packages
    */
-  getAll: () => apiRequest('/api/scraping-packages'),
+  getAll: async () => {
+    try {
+      const packages = await apiRequest('/api/scraping-packages');
+
+      // Check if we got an empty list
+      if (Array.isArray(packages) && packages.length === 0) {
+        console.log('No scraping packages found');
+      }
+
+      return packages; // Already normalized by apiRequest
+    } catch (error) {
+      console.error('Failed to fetch scraping packages:', error);
+      // Re-throw to let the component handle the error
+      throw error;
+    }
+  },
 
   /**
    * Get a specific scraping package
    * @param {string} id - Package ID
    * @returns {Promise<Object>} - Scraping package
    */
-  getById: (id) => apiRequest(`/api/scraping-packages/${id}`),
+  getById: async (id) => {
+    try {
+      return await apiRequest(`/api/scraping-packages/${id}`);
+    } catch (error) {
+      console.error(`Failed to fetch scraping package ${id}:`, error);
+      throw error;
+    }
+  },
 
   /**
    * Create a new scraping package
    * @param {Object} data - Package data
    * @returns {Promise<Object>} - Created package
    */
-  create: (data) => {
+  create: async (data) => {
     // Log the data being sent
     console.log('Creating package with data:', data);
 
@@ -122,10 +245,18 @@ export const scrapingPackagesApi = {
 
     console.log('Transformed API data for new package:', apiData);
 
-    return apiRequest('/api/scraping-packages', {
-      method: 'POST',
-      body: JSON.stringify(apiData),
-    });
+    try {
+      const newPackage = await apiRequest('/api/scraping-packages', {
+        method: 'POST',
+        body: JSON.stringify(apiData),
+      });
+
+      console.log('Successfully created package:', newPackage);
+      return newPackage;
+    } catch (error) {
+      console.error('Failed to create scraping package:', error);
+      throw error;
+    }
   },
 
   /**
@@ -134,7 +265,7 @@ export const scrapingPackagesApi = {
    * @param {Object} data - Package data
    * @returns {Promise<Object>} - Updated package
    */
-  update: (id, data) => {
+  update: async (id, data) => {
     // Log the data being sent
     console.log(`Updating package ${id} with data:`, data);
 
@@ -147,10 +278,18 @@ export const scrapingPackagesApi = {
 
     console.log(`Transformed API data for package ${id}:`, apiData);
 
-    return apiRequest(`/api/scraping-packages/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(apiData),
-    });
+    try {
+      const updatedPackage = await apiRequest(`/api/scraping-packages/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(apiData),
+      });
+
+      console.log('Successfully updated package:', updatedPackage);
+      return updatedPackage;
+    } catch (error) {
+      console.error(`Failed to update scraping package ${id}:`, error);
+      throw error;
+    }
   },
 
   /**
@@ -158,13 +297,21 @@ export const scrapingPackagesApi = {
    * @param {string} id - Package ID
    * @returns {Promise<Object>} - Response
    */
-  delete: (id) => {
+  delete: async (id) => {
     // Log the delete operation
     console.log(`Deleting package ${id}`);
 
-    return apiRequest(`/api/scraping-packages/${id}`, {
-      method: 'DELETE',
-    });
+    try {
+      const result = await apiRequest(`/api/scraping-packages/${id}`, {
+        method: 'DELETE',
+      });
+
+      console.log(`Successfully deleted package ${id}`);
+      return result;
+    } catch (error) {
+      console.error(`Failed to delete scraping package ${id}:`, error);
+      throw error;
+    }
   },
 };
 
@@ -176,21 +323,43 @@ export const personasApi = {
    * Get all personas
    * @returns {Promise<Array>} - List of personas
    */
-  getAll: () => apiRequest('/api/personas'),
+  getAll: async () => {
+    try {
+      const personas = await apiRequest('/api/personas');
+
+      // Check if we got an empty list
+      if (Array.isArray(personas) && personas.length === 0) {
+        console.log('No personas found');
+      }
+
+      return personas; // Already normalized by apiRequest
+    } catch (error) {
+      console.error('Failed to fetch personas:', error);
+      // Re-throw to let the component handle the error
+      throw error;
+    }
+  },
 
   /**
    * Get a specific persona
    * @param {string} id - Persona ID
    * @returns {Promise<Object>} - Persona
    */
-  getById: (id) => apiRequest(`/api/personas/${id}`),
+  getById: async (id) => {
+    try {
+      return await apiRequest(`/api/personas/${id}`);
+    } catch (error) {
+      console.error(`Failed to fetch persona ${id}:`, error);
+      throw error;
+    }
+  },
 
   /**
    * Create a new persona
    * @param {Object} data - Persona data
    * @returns {Promise<Object>} - Created persona
    */
-  create: (data) => {
+  create: async (data) => {
     // Handle both old and new schema
     const apiData = {
       name: data.name,
@@ -203,10 +372,18 @@ export const personasApi = {
 
     console.log('Creating persona with data:', JSON.stringify(apiData, null, 2));
 
-    return apiRequest('/api/personas', {
-      method: 'POST',
-      body: JSON.stringify(apiData),
-    });
+    try {
+      const newPersona = await apiRequest('/api/personas', {
+        method: 'POST',
+        body: JSON.stringify(apiData),
+      });
+
+      console.log('Successfully created persona:', newPersona);
+      return newPersona;
+    } catch (error) {
+      console.error('Failed to create persona:', error);
+      throw error;
+    }
   },
 
   /**
@@ -215,7 +392,7 @@ export const personasApi = {
    * @param {Object} data - Persona data
    * @returns {Promise<Object>} - Updated persona
    */
-  update: (id, data) => {
+  update: async (id, data) => {
     // Handle both old and new schema
     const apiData = {
       name: data.name,
@@ -228,10 +405,18 @@ export const personasApi = {
 
     console.log(`Updating persona ${id} with data:`, JSON.stringify(apiData, null, 2));
 
-    return apiRequest(`/api/personas/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(apiData),
-    });
+    try {
+      const updatedPersona = await apiRequest(`/api/personas/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(apiData),
+      });
+
+      console.log('Successfully updated persona:', updatedPersona);
+      return updatedPersona;
+    } catch (error) {
+      console.error(`Failed to update persona ${id}:`, error);
+      throw error;
+    }
   },
 
   /**
@@ -239,12 +424,20 @@ export const personasApi = {
    * @param {string} id - Persona ID
    * @returns {Promise<Object>} - Response
    */
-  delete: (id) => {
+  delete: async (id) => {
     console.log(`Deleting persona ${id}`);
 
-    return apiRequest(`/api/personas/${id}`, {
-      method: 'DELETE',
-    });
+    try {
+      const result = await apiRequest(`/api/personas/${id}`, {
+        method: 'DELETE',
+      });
+
+      console.log(`Successfully deleted persona ${id}`);
+      return result;
+    } catch (error) {
+      console.error(`Failed to delete persona ${id}:`, error);
+      throw error;
+    }
   },
 };
 
@@ -324,26 +517,55 @@ export const documentsApi = {
    * Get all documents
    * @returns {Promise<Array>} - List of documents
    */
-  getAll: () => apiRequest('/api/documents'),
+  getAll: async () => {
+    try {
+      const documents = await apiRequest('/api/documents');
+
+      // Check if we got an empty list
+      if (Array.isArray(documents) && documents.length === 0) {
+        console.log('No documents found');
+      }
+
+      return documents; // Already normalized by apiRequest
+    } catch (error) {
+      console.error('Failed to fetch documents:', error);
+      // Re-throw to let the component handle the error
+      throw error;
+    }
+  },
 
   /**
    * Get a specific document
    * @param {string} id - Document ID
    * @returns {Promise<Object>} - Document metadata
    */
-  getById: (id) => apiRequest(`/api/documents/${id}`),
+  getById: async (id) => {
+    try {
+      return await apiRequest(`/api/documents/${id}`);
+    } catch (error) {
+      console.error(`Failed to fetch document ${id}:`, error);
+      throw error;
+    }
+  },
 
   /**
    * Get document content
    * @param {string} id - Document ID
    * @returns {Promise<Object>} - Document content
    */
-  getContent: (id) => apiRequest(`/api/documents/${id}/content`),
+  getContent: async (id) => {
+    try {
+      return await apiRequest(`/api/documents/${id}/content`);
+    } catch (error) {
+      console.error(`Failed to fetch content for document ${id}:`, error);
+      throw error;
+    }
+  },
 
   /**
    * Download document
    * @param {string} id - Document ID
-   * @returns {Promise<Object>} - Document binary data
+   * @returns {string} - Document download URL
    */
   download: (id) => {
     const url = `${API_BASE_URL}/api/documents/${id}/download`;
@@ -379,7 +601,14 @@ export const documentsApi = {
         throw new Error(`Upload failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
-      return await response.json();
+      // Parse the response
+      const documentData = await response.json();
+
+      // Normalize the document data
+      const normalizedDocument = normalizeIds(documentData);
+
+      console.log('Successfully uploaded document:', normalizedDocument);
+      return normalizedDocument;
     } catch (error) {
       console.error(`Document upload failed: ${error.message}`);
       throw error;
@@ -391,9 +620,21 @@ export const documentsApi = {
    * @param {string} id - Document ID
    * @returns {Promise<Object>} - Response
    */
-  delete: (id) => apiRequest(`/api/documents/${id}`, {
-    method: 'DELETE',
-  }),
+  delete: async (id) => {
+    console.log(`Deleting document ${id}`);
+
+    try {
+      const result = await apiRequest(`/api/documents/${id}`, {
+        method: 'DELETE',
+      });
+
+      console.log(`Successfully deleted document ${id}`);
+      return result;
+    } catch (error) {
+      console.error(`Failed to delete document ${id}:`, error);
+      throw error;
+    }
+  },
 };
 
 /**
@@ -427,7 +668,8 @@ export const enhancedNewsletterApi = {
     // Create request object with all necessary parameters
     const requestData = {
       model,
-      document_ids: documentIds,
+      // The backend expects 'documents' not 'document_ids'
+      documents: documentIds,
       prompt,
       search_query: searchQuery,
       client_context: clientContext,
@@ -510,7 +752,9 @@ export const chatApi = {
     // Create request object with all necessary parameters
     const requestData = {
       model,
-      document_ids: documentIds,
+      // The backend doesn't accept document_ids for the newsletter/generate endpoint
+      // Only include document_ids if there are any to avoid the error
+      ...(documentIds && documentIds.length > 0 ? { documents: documentIds } : {}),
       package_ids: packageIds, // This is the correct field name for the API
       prompt: message,
       client_context: clientContext,
@@ -529,6 +773,18 @@ export const chatApi = {
       requestData.package_ids = [];
     } else if (packageIds && packageIds.length > 0) {
       console.log('Using package IDs in request:', packageIds);
+
+      // Verify that package IDs are strings, not objects
+      if (packageIds.some(id => typeof id === 'object')) {
+        console.warn('Found object in package IDs array, normalizing to string IDs');
+        requestData.package_ids = packageIds.map(id => {
+          if (typeof id === 'object' && id !== null) {
+            return id._id || id.id;
+          }
+          return id;
+        });
+        console.log('Normalized package IDs:', requestData.package_ids);
+      }
     }
 
     // Log the model being used
@@ -569,15 +825,37 @@ export const chatApi = {
 
     console.log('Sending chat message:', JSON.stringify(requestData, null, 2));
 
-    // Use the same endpoint as newsletter generation since the backend
-    // doesn't have a dedicated chat endpoint yet
-    const finalRequestBody = JSON.stringify(requestData);
-    console.log('Final request body as string:', finalRequestBody);
+    try {
+      // Use the same endpoint as newsletter generation since the backend
+      // doesn't have a dedicated chat endpoint yet
+      const finalRequestBody = JSON.stringify(requestData);
+      console.log('Final request body as string:', finalRequestBody);
 
-    return apiRequest('/api/newsletter/generate', {
-      method: 'POST',
-      body: finalRequestBody,
-    });
+      const response = await apiRequest('/api/newsletter/generate', {
+        method: 'POST',
+        body: finalRequestBody,
+      });
+
+      console.log('Chat response received:', response);
+
+      // Check if the response indicates no content was retrieved
+      if (response.articles_count === 0 && requestData.package_ids && requestData.package_ids.length > 0) {
+        console.warn('No articles were retrieved from the specified packages. This might indicate a retrieval issue.');
+      }
+
+      return response;
+    } catch (error) {
+      console.error('Chat request failed:', error);
+
+      // Check if this is a 503 error (database offline)
+      if (error.message.includes('Database is currently offline')) {
+        // The apiRequest function already handles polling the health endpoint
+        throw new Error('The database is currently offline. Please try again in a few moments.');
+      }
+
+      // For other errors, provide a more helpful message
+      throw new Error(`Failed to generate chat response: ${error.message}`);
+    }
   }
 };
 
