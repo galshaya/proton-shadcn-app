@@ -18,6 +18,12 @@ export function ProjectForm({ project, onSubmit, onCancel }) {
     name: project?.name || "",
     description: project?.description || "",
     status: project?.status || "active",
+    newsletter_schedule: project?.newsletter_schedule || {
+      frequency: "weekly",
+      time: "09:00",
+      days: ["monday"],
+      active: false
+    }
   });
 
   const handleSubmit = (e) => {
@@ -38,7 +44,7 @@ export function ProjectForm({ project, onSubmit, onCancel }) {
           required
         />
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="description" className="text-white">Description</Label>
         <Textarea
@@ -50,7 +56,7 @@ export function ProjectForm({ project, onSubmit, onCancel }) {
           required
         />
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="status" className="text-white">Status</Label>
         <Select
@@ -69,17 +75,17 @@ export function ProjectForm({ project, onSubmit, onCancel }) {
           </SelectContent>
         </Select>
       </div>
-      
+
       <div className="flex justify-end gap-2">
-        <Button 
-          type="button" 
-          variant="outline" 
+        <Button
+          type="button"
+          variant="outline"
           onClick={onCancel}
           className="bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
         >
           Cancel
         </Button>
-        <Button 
+        <Button
           type="submit"
           className="bg-white text-black hover:bg-gray-200 font-light"
         >
@@ -88,4 +94,4 @@ export function ProjectForm({ project, onSubmit, onCancel }) {
       </div>
     </form>
   );
-} 
+}
