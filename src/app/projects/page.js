@@ -23,14 +23,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import apiClient from "@/lib/apiClient"
 
 export default function ProjectsPage() {
   const router = useRouter()
-  const [projects, setProjects] = useState([
-    { id: "proj_1", name: "AI-driven content analysis", description: "Automated content evaluation for market trends", status: "active", lastUpdated: "2024-03-15" },
-    { id: "proj_2", name: "Market research automation", description: "Competitor analysis in retail sector", status: "archived", lastUpdated: "2024-03-14" },
-    { id: "proj_3", name: "Customer feedback analysis", description: "Sentiment analysis of survey responses", status: "active", lastUpdated: "2024-03-13" },
-  ])
+  const [projects, setProjects] = useState([])
   const [searchInput, setSearchInput] = useState("")
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [currentPage, setCurrentPage] = useState(1)
@@ -38,6 +35,27 @@ export default function ProjectsPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [selectedProject, setSelectedProject] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  // Fetch projects from API
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        const data = await apiClient.projects.getAll()
+        setProjects(data)
+      } catch (err) {
+        console.error("Error fetching projects:", err)
+        setError("Failed to load projects. Please try again.")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchProjects()
+  }, [])
 
   // Filter projects based on search input
   const filteredProjects = projects.filter(project =>
@@ -52,32 +70,55 @@ export default function ProjectsPage() {
   const endIndex = startIndex + rowsPerPage
   const currentProjects = filteredProjects.slice(startIndex, endIndex)
 
-  const handleCreateProject = (projectData) => {
-    const newProject = {
-      id: "proj_" + Math.random().toString(36).substring(2, 9),
-      ...projectData,
-      lastUpdated: new Date().toISOString().split("T")[0]
+  const handleCreateProject = async (projectData) => {
+    try {
+      setIsLoading(true)
+      const newProject = await apiClient.projects.create(projectData)
+      setProjects([...projects, newProject])
+      setShowCreateModal(false)
+    } catch (err) {
+      console.error("Error creating project:", err)
+      alert("Failed to create project: " + err.message)
+    } finally {
+      setIsLoading(false)
     }
-    setProjects([...projects, newProject])
-    setShowCreateModal(false)
   }
 
-  const handleEditProject = (projectData) => {
-    const updatedProjects = projects.map(project =>
-      project.id === selectedProject.id
-        ? { ...project, ...projectData, lastUpdated: new Date().toISOString().split("T")[0] }
-        : project
-    )
-    setProjects(updatedProjects)
-    setShowEditModal(false)
-    setSelectedProject(null)
+  const handleEditProject = async (projectData) => {
+    try {
+      setIsLoading(true)
+      const updatedProject = await apiClient.projects.update(selectedProject.id, projectData)
+
+      const updatedProjects = projects.map(project =>
+        project.id === selectedProject.id ? updatedProject : project
+      )
+
+      setProjects(updatedProjects)
+      setShowEditModal(false)
+      setSelectedProject(null)
+    } catch (err) {
+      console.error("Error updating project:", err)
+      alert("Failed to update project: " + err.message)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleDeleteProject = () => {
-    const updatedProjects = projects.filter(project => project.id !== selectedProject.id)
-    setProjects(updatedProjects)
-    setShowDeleteDialog(false)
-    setSelectedProject(null)
+  const handleDeleteProject = async () => {
+    try {
+      setIsLoading(true)
+      await apiClient.projects.delete(selectedProject.id)
+
+      const updatedProjects = projects.filter(project => project.id !== selectedProject.id)
+      setProjects(updatedProjects)
+      setShowDeleteDialog(false)
+      setSelectedProject(null)
+    } catch (err) {
+      console.error("Error deleting project:", err)
+      alert("Failed to delete project: " + err.message)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handlePageChange = (page) => {
@@ -88,13 +129,26 @@ export default function ProjectsPage() {
     <div>
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-light">Projects</h1>
-        <Button 
+        <Button
           onClick={() => setShowCreateModal(true)}
           className="bg-white text-black hover:bg-gray-200 font-light"
+          disabled={isLoading}
         >
           Create Project
         </Button>
       </div>
+
+      {error && (
+        <div className="bg-red-900/30 border border-red-800 text-red-400 p-4 rounded mb-6">
+          {error}
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="text-center py-12 bg-[#111] rounded-lg border border-gray-800">
+          <div className="animate-pulse">Loading projects...</div>
+        </div>
+      )}
 
       <div className="flex justify-between items-center mb-6 gap-4">
         <Input
@@ -129,19 +183,19 @@ export default function ProjectsPage() {
           <tbody>
             {currentProjects.map((project) => (
               <tr key={project.id} className="border-b border-gray-800 hover:bg-[#0a0a0a] cursor-pointer">
-                <td 
+                <td
                   className="px-6 py-4 text-sm"
                   onClick={() => router.push(`/projects/${project.id}`)}
                 >
                   {project.name}
                 </td>
-                <td 
+                <td
                   className="px-6 py-4 text-sm text-gray-400"
                   onClick={() => router.push(`/projects/${project.id}`)}
                 >
                   {project.description}
                 </td>
-                <td 
+                <td
                   className="px-6 py-4"
                   onClick={() => router.push(`/projects/${project.id}`)}
                 >
@@ -151,11 +205,11 @@ export default function ProjectsPage() {
                     {project.status}
                   </span>
                 </td>
-                <td 
+                <td
                   className="px-6 py-4 text-sm text-gray-400"
                   onClick={() => router.push(`/projects/${project.id}`)}
                 >
-                  {project.lastUpdated}
+                  {project.updated_at ? new Date(project.updated_at).toLocaleDateString() : 'N/A'}
                 </td>
                 <td className="px-6 py-4 text-sm">
                   <div className="flex gap-2">
@@ -273,4 +327,4 @@ export default function ProjectsPage() {
       </AlertDialog>
     </div>
   )
-} 
+}

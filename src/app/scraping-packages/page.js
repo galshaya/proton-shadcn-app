@@ -6,10 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Modal } from "@/components/ui/modal"
 import { SharedPersonaForm } from "@/components/shared/persona-form"
-import { RecipientForm } from "@/components/forms/recipient-form"
+
 import { ScrapingPackageConfigForm } from "@/components/forms/scraping-package-config-form"
 
-import { Plus, Settings, Edit, MoreHorizontal, Users, UserCircle, Trash, Search, Calendar, Mail, Filter, Package, Check, X, PlusCircle, Edit2, Eye, Clock, MailCheck } from "lucide-react"
+import { Plus, Settings, Edit, Users, UserCircle, Trash, Search, Package, Check, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
 import { scrapingPackagesApi } from "@/lib/apiClient"
@@ -20,20 +20,20 @@ export default function ScrapingPackagesPage() {
   const [activeTab, setActiveTab] = useState("packages")
   const [showPackageModal, setShowPackageModal] = useState(false)
   const [showPersonaModal, setShowPersonaModal] = useState(false)
-  const [showRecipientModal, setShowRecipientModal] = useState(false)
+
   const [showConfigureModal, setShowConfigureModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showDeletePersonaModal, setShowDeletePersonaModal] = useState(false)
   const [selectedPackage, setSelectedPackage] = useState(null)
   const [selectedPersona, setSelectedPersona] = useState(null)
-  const [selectedRecipient, setSelectedRecipient] = useState(null)
+
   const [packages, setPackages] = useState([])
   const [personas, setPersonas] = useState([])
   const [recipients, setRecipients] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [packageSearch, setPackageSearch] = useState("")
   const [personaSearch, setPersonaSearch] = useState("")
-  const [recipientSearch, setRecipientSearch] = useState("")
+
 
   useEffect(() => {
     loadData()
@@ -311,24 +311,7 @@ export default function ScrapingPackagesPage() {
     }
   }
 
-  const handleCreateRecipient = (formData) => {
-    const newRecipient = {
-      id: "rec_" + Math.random().toString(36).substring(2, 9),
-      ...formData,
-      createdAt: new Date().toISOString()
-    }
-    setRecipients([...recipients, newRecipient])
-    setShowRecipientModal(false)
-  }
 
-  const handleEditRecipient = (formData) => {
-    const updatedRecipients = recipients.map((recipient) =>
-      recipient.id === selectedRecipient.id ? { ...recipient, ...formData } : recipient
-    )
-    setRecipients(updatedRecipients)
-    setSelectedRecipient(null)
-    setShowRecipientModal(false)
-  }
 
 
 
@@ -472,11 +455,7 @@ export default function ScrapingPackagesPage() {
     persona.name.toLowerCase().includes(personaSearch.toLowerCase())
   )
 
-  const filteredRecipients = recipients.filter(recipient =>
-    recipient.name.toLowerCase().includes(recipientSearch.toLowerCase()) ||
-    recipient.email.toLowerCase().includes(recipientSearch.toLowerCase()) ||
-    (recipient.company && recipient.company.toLowerCase().includes(recipientSearch.toLowerCase()))
-  )
+
 
   if (isLoading) {
     return <div className="container mx-auto px-4 py-8">Loading...</div>
@@ -499,12 +478,6 @@ export default function ScrapingPackagesPage() {
             className="rounded-none px-4 py-2 text-gray-400 data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-white font-light"
           >
             Personas
-          </TabsTrigger>
-          <TabsTrigger
-            value="recipients"
-            className="rounded-none px-4 py-2 text-gray-400 data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-white font-light"
-          >
-            Recipients
           </TabsTrigger>
         </TabsList>
 
@@ -764,82 +737,7 @@ export default function ScrapingPackagesPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="recipients" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <div className="relative max-w-sm">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search recipients..."
-                className="pl-8 bg-[#111] border-gray-800 text-white"
-                value={recipientSearch}
-                onChange={(e) => setRecipientSearch(e.target.value)}
-              />
-            </div>
-            <Button
-              onClick={() => {
-                setSelectedRecipient(null)
-                setShowRecipientModal(true)
-              }}
-              className="bg-white text-black hover:bg-gray-200 font-light"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Recipient
-            </Button>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredRecipients.length === 0 ? (
-              <div className="text-center py-12 col-span-full bg-[#111] rounded-lg border border-gray-800">
-                <Mail className="h-12 w-12 mx-auto text-gray-500 mb-4" />
-                <h3 className="text-lg font-light mb-2">No Recipients Yet</h3>
-                <p className="text-sm text-gray-400 mb-4">
-                  Add recipients to manage your audience
-                </p>
-                <Button
-                  onClick={() => {
-                    setSelectedRecipient(null)
-                    setShowRecipientModal(true)
-                  }}
-                  className="bg-white text-black hover:bg-gray-200 font-light"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Recipient
-                </Button>
-              </div>
-            ) : (
-              filteredRecipients.map((recipient) => (
-                <div key={recipient.id} className="bg-[#111] p-4 rounded border border-gray-800 hover:border-gray-700 transition-colors">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-light text-white">{recipient.name}</h3>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => {
-                        setSelectedRecipient(recipient)
-                        setShowRecipientModal(true)
-                      }}
-                      className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-800"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <p className="text-sm text-gray-400 mb-4">{recipient.email}</p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center text-sm">
-                      <MailCheck className="h-4 w-4 mr-2 text-gray-500" />
-                      <span className="text-gray-400">Newsletters: {recipient.newsletterCount || 0}</span>
-                    </div>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-light ${
-                      recipient.status === "active" ? "bg-green-900/30 text-green-400" : "bg-gray-800 text-gray-400"
-                    }`}>
-                      {recipient.status}
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </TabsContent>
       </Tabs>
 
       {showPackageModal && (
@@ -899,78 +797,7 @@ export default function ScrapingPackagesPage() {
 
 
 
-      {showRecipientModal && selectedRecipient && (
-        <Modal
-          title={`Edit Recipient - ${selectedRecipient.name}`}
-          isOpen={showRecipientModal}
-          onClose={() => setShowRecipientModal(false)}
-        >
-          <div className="space-y-4 py-2 pb-4">
-            <div className="space-y-2">
-              <label htmlFor="name" className="text-sm font-light">
-                Name
-              </label>
-              <Input
-                id="name"
-                placeholder="Enter recipient name"
-                defaultValue={selectedRecipient.name}
-                className="bg-[#111] border-gray-800 text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-light">
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter recipient email"
-                defaultValue={selectedRecipient.email}
-                className="bg-[#111] border-gray-800 text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-light">
-                Status
-              </label>
-              <div className="flex items-center space-x-2">
-                <span className="inline-flex items-center px-2.5 py-1 rounded text-xs font-light bg-green-900/30 text-green-400 cursor-pointer">
-                  Active
-                </span>
-                <span className="inline-flex items-center px-2.5 py-1 rounded text-xs font-light bg-gray-800 text-gray-400 cursor-pointer">
-                  Inactive
-                </span>
-              </div>
-            </div>
 
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => setShowRecipientModal(false)}
-                className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
-              >
-                <X className="h-4 w-4 mr-2" />
-                Cancel
-              </Button>
-              <Button
-                onClick={() => {
-                  const updatedRecipient = {
-                    ...selectedRecipient,
-                    name: document.getElementById("name").value,
-                    email: document.getElementById("email").value,
-                    status: document.querySelector('input[name="status"]:checked').value
-                  }
-                  handleEditRecipient(updatedRecipient)
-                }}
-                className="bg-white text-black hover:bg-gray-200 font-light"
-              >
-                <Check className="h-4 w-4 mr-2" />
-                Update
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
 
       {/* Delete Package Confirmation Modal */}
       {showDeleteModal && selectedPackage && (

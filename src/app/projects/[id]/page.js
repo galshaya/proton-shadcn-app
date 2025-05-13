@@ -11,28 +11,34 @@ import { DataTable } from "@/components/ui/data-table";
 import { Modal } from "@/components/ui/modal";
 import { ProjectForm } from "@/components/forms/project-form";
 import { ScrapingPackageConfigForm } from "@/components/forms/scraping-package-config-form";
-import { mockApi } from "@/lib/mock-data";
-import { Upload, FileText, Plus, Settings, History, Edit, X, Search } from "lucide-react";
+import { RecipientForm } from "@/components/forms/recipient-form";
+import NewsletterScheduleForm from "@/components/forms/newsletter-schedule-form";
+import ScheduledNewsletters from "@/components/sections/scheduled-newsletters";
+import NewsletterCard from "@/components/cards/newsletter-card";
 import { Input } from "@/components/ui/input";
+import { formatDate } from "@/lib/utils";
+import apiClient from "@/lib/apiClient";
+import { Upload, FileText, Plus, Settings, History, Edit, X, Search, Calendar, Users, Mail, MailCheck, Edit2, UserCircle } from "lucide-react";
+import { Label } from "@/components/ui/label";
 
 export default function ProjectPage() {
   const { id } = useParams();
   const [project, setProject] = useState(null);
-  const [documents, setDocuments] = useState([]);
-  const [packages, setPackages] = useState([]);
   const [personas, setPersonas] = useState([]);
   const [newsletters, setNewsletters] = useState([]);
+  const [scheduledNewsletters, setScheduledNewsletters] = useState([]);
+  const [recipients, setRecipients] = useState([]);
+  const [schedule, setSchedule] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("documents");
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [showPackageModal, setShowPackageModal] = useState(false);
-  const [showConfigureModal, setShowConfigureModal] = useState(false);
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [selectedPackage, setSelectedPackage] = useState(null);
-  const [uploadedFiles, setUploadedFiles] = useState([]);
-  const [dragActive, setDragActive] = useState(false);
+  const [activeTab, setActiveTab] = useState("newsletter");
+  const [showRecipientModal, setShowRecipientModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [selectedRecipient, setSelectedRecipient] = useState(null);
+  const [selectedNewsletter, setSelectedNewsletter] = useState(null);
   const [searchNewsletter, setSearchNewsletter] = useState("");
+  const [recipientSearch, setRecipientSearch] = useState("");
 
   useEffect(() => {
     loadProjectData();
@@ -40,19 +46,37 @@ export default function ProjectPage() {
 
   const loadProjectData = async () => {
     try {
-      const [projectData, documentsData, packagesData, personasData, newslettersData] = await Promise.all([
-        mockApi.getProject(id),
-        mockApi.getProjectDocuments(id),
-        mockApi.getProjectPackages(id),
-        mockApi.getPersonas(),
-        mockApi.getProjectNewsletters(id),
-      ]);
+      setIsLoading(true);
 
+      // Get project data
+      const projectData = await apiClient.projects.getById(id);
       setProject(projectData);
-      setDocuments(documentsData);
-      setPackages(packagesData);
+
+      // Get personas
+      const personasData = await apiClient.personas.getAll();
       setPersonas(personasData);
+
+      // Get newsletters for this project (sent newsletters)
+      const newslettersData = await apiClient.newslettersArchive.getAll(id, { status: 'sent' });
       setNewsletters(newslettersData);
+
+      // Get scheduled newsletters for this project
+      const scheduledNewslettersData = await apiClient.newslettersArchive.getAll(id, { status: 'scheduled' });
+      setScheduledNewsletters(scheduledNewslettersData);
+
+      // Get project schedule
+      try {
+        const scheduleData = await apiClient.projects.getSchedule(id);
+        setSchedule(scheduleData);
+      } catch (scheduleError) {
+        console.log("No schedule found for this project:", scheduleError);
+        setSchedule(null);
+      }
+
+      // Get recipients for this project
+      const recipientsData = await apiClient.recipients.getAll(id);
+      setRecipients(recipientsData);
+
     } catch (error) {
       console.error("Error loading project data:", error);
     } finally {
@@ -62,125 +86,115 @@ export default function ProjectPage() {
 
   const handleUpdateProject = async (formData) => {
     try {
-      const updatedProject = await mockApi.updateProject(id, formData);
+      const updatedProject = await apiClient.projects.update(id, formData);
       setProject(updatedProject);
       setIsEditModalOpen(false);
     } catch (error) {
       console.error("Error updating project:", error);
+      alert("Failed to update project: " + error.message);
     }
   };
 
-  const handleCreatePackage = (formData) => {
-    const newPackage = {
-      id: "pkg_" + Math.random().toString(36).substring(2, 9),
-      ...formData,
-      projectId: id,
-      createdAt: new Date().toISOString(),
-      lastRun: null,
-      nextRun: formData.schedule?.date || null,
-      status: "active"
-    };
-    setPackages([...packages, newPackage]);
-    setShowPackageModal(false);
-  }
-
-  const handleEditPackage = (formData) => {
-    const updatedPackages = packages.map((pkg) =>
-      pkg.id === selectedPackage.id ? { ...pkg, ...formData } : pkg
-    );
-    setPackages(updatedPackages);
-    setSelectedPackage(null);
-    setShowPackageModal(false);
-  }
-
-  const handleConfigurePackage = (pkg) => {
-    setSelectedPackage(pkg);
-    setShowConfigureModal(true);
-  }
-
-  const handleViewHistory = (pkg) => {
-    setSelectedPackage(pkg);
-    setShowHistoryModal(true);
-  }
-
-  const handleDrag = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFiles(e.dataTransfer.files);
-    }
-  };
-
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFiles(e.target.files);
-    }
-  };
-
-  const handleFiles = (files) => {
-    const newFiles = Array.from(files).map(file => ({
-      id: "file_" + Math.random().toString(36).substring(2, 9),
-      name: file.name,
-      size: formatFileSize(file.size),
-      type: file.type,
-      file: file
-    }));
-    setUploadedFiles([...uploadedFiles, ...newFiles]);
-  };
-
-  const removeFile = (id) => {
-    setUploadedFiles(uploadedFiles.filter(file => file.id !== id));
-  };
-
-  const formatFileSize = (bytes) => {
-    if (bytes < 1024) return bytes + ' B';
-    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-    else return (bytes / 1048576).toFixed(1) + ' MB';
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    try {
-      return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
-    } catch (error) {
-      console.error("Error formatting date:", error);
-      return "Invalid Date";
-    }
-  };
-
-  const handleUploadDocument = () => {
-    // Simulate upload and add to documents
-    const newDocs = uploadedFiles.map(file => ({
-      id: "doc_" + Math.random().toString(36).substring(2, 9),
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      uploadedAt: new Date().toISOString()
-    }));
-    
-    setDocuments([...documents, ...newDocs]);
-    setUploadedFiles([]);
-    setShowUploadModal(false);
-  };
-
-  const filteredNewsletters = newsletters.filter(newsletter => 
-    newsletter.subject.toLowerCase().includes(searchNewsletter.toLowerCase())
+  const filteredNewsletters = newsletters.filter(newsletter =>
+    newsletter.subject?.toLowerCase().includes(searchNewsletter.toLowerCase()) ||
+    newsletter.title?.toLowerCase().includes(searchNewsletter.toLowerCase())
   );
+
+  const filteredRecipients = recipients.filter(recipient =>
+    recipient.name?.toLowerCase().includes(recipientSearch.toLowerCase()) ||
+    recipient.email?.toLowerCase().includes(recipientSearch.toLowerCase())
+  );
+
+  const handleCreateRecipient = async (formData) => {
+    try {
+      const newRecipient = await apiClient.recipients.create(id, formData);
+      setRecipients([...recipients, newRecipient]);
+      setShowRecipientModal(false);
+    } catch (error) {
+      console.error("Error creating recipient:", error);
+      alert("Failed to create recipient: " + error.message);
+    }
+  };
+
+  const handleUpdateRecipient = async (formData) => {
+    try {
+      const updatedRecipient = await apiClient.recipients.update(selectedRecipient.id, formData);
+      const updatedRecipients = recipients.map(recipient =>
+        recipient.id === selectedRecipient.id ? updatedRecipient : recipient
+      );
+      setRecipients(updatedRecipients);
+      setShowRecipientModal(false);
+      setSelectedRecipient(null);
+    } catch (error) {
+      console.error("Error updating recipient:", error);
+      alert("Failed to update recipient: " + error.message);
+    }
+  };
+  
+  // Newsletter scheduling handlers
+  const handleUpdateSchedule = async (formData) => {
+    try {
+      const updatedSchedule = await apiClient.projects.updateSchedule(id, formData);
+      setSchedule(updatedSchedule);
+      setShowScheduleModal(false);
+      alert("Newsletter schedule updated successfully");
+      
+      // Refresh project data to get any newly scheduled newsletters
+      loadProjectData();
+    } catch (error) {
+      console.error("Error updating schedule:", error);
+      alert("Failed to update schedule: " + error.message);
+    }
+  };
+  
+  const handleCancelNewsletter = async (newsletter) => {
+    if (!confirm(`Are you sure you want to cancel the newsletter "${newsletter.subject || newsletter.title}"?`)) {
+      return;
+    }
+    
+    try {
+      await apiClient.newslettersArchive.cancel(newsletter.id);
+      // Refresh scheduled newsletters
+      const scheduledNewslettersData = await apiClient.newslettersArchive.getAll(id, { status: 'scheduled' });
+      setScheduledNewsletters(scheduledNewslettersData);
+      alert("Newsletter cancelled successfully");
+    } catch (error) {
+      console.error("Error cancelling newsletter:", error);
+      alert("Failed to cancel newsletter: " + error.message);
+    }
+  };
+  
+  const handleRescheduleNewsletter = async (newsletter, newDate) => {
+    try {
+      await apiClient.newslettersArchive.reschedule(newsletter.id, { scheduled_for: newDate });
+      // Refresh scheduled newsletters
+      const scheduledNewslettersData = await apiClient.newslettersArchive.getAll(id, { status: 'scheduled' });
+      setScheduledNewsletters(scheduledNewslettersData);
+      setShowRescheduleModal(false);
+      setSelectedNewsletter(null);
+      alert("Newsletter rescheduled successfully");
+    } catch (error) {
+      console.error("Error rescheduling newsletter:", error);
+      alert("Failed to reschedule newsletter: " + error.message);
+    }
+  };
+  
+  const handleViewNewsletter = (newsletter) => {
+    setSelectedNewsletter(newsletter);
+    // Here you would typically open a modal to view the newsletter content
+    // For now, we'll just log it
+    console.log("Viewing newsletter:", newsletter);
+  };
+
+  const handleDeleteRecipient = async (id) => {
+    try {
+      await apiClient.recipients.delete(id);
+      setRecipients(recipients.filter(recipient => recipient.id !== id));
+    } catch (error) {
+      console.error("Error deleting recipient:", error);
+      alert("Failed to delete recipient: " + error.message);
+    }
+  };
 
   if (isLoading) {
     return <div className="container mx-auto px-4 py-8">Loading...</div>;
@@ -197,7 +211,7 @@ export default function ProjectPage() {
           <h1 className="text-2xl font-light">{project.name}</h1>
           <p className="text-sm text-gray-400">{project.description}</p>
         </div>
-        <Button 
+        <Button
           onClick={() => setIsEditModalOpen(true)}
           className="bg-white text-black hover:bg-gray-200 font-light"
         >
@@ -205,109 +219,163 @@ export default function ProjectPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-[#111] p-6 rounded border border-gray-800 hover:border-gray-700 transition-colors">
           <div className="space-y-2">
-            <p className="text-sm text-gray-400 font-light">Documents</p>
-            <div className="text-2xl font-light">{documents.length}</div>
+            <p className="text-sm text-gray-400 font-light">Recipients</p>
+            <div className="text-2xl font-light">{recipients.length}</div>
           </div>
         </div>
         <div className="bg-[#111] p-6 rounded border border-gray-800 hover:border-gray-700 transition-colors">
           <div className="space-y-2">
-            <p className="text-sm text-gray-400 font-light">Next Newsletter</p>
-            <div className="text-2xl font-light">{formatDate(project.nextNewsletter)}</div>
-          </div>
-        </div>
-        <div className="bg-[#111] p-6 rounded border border-gray-800 hover:border-gray-700 transition-colors">
-          <div className="space-y-2">
-            <p className="text-sm text-gray-400 font-light">Scraping Packages</p>
-            <div className="text-2xl font-light">{packages.length}</div>
+            <p className="text-sm text-gray-400 font-light">Newsletters</p>
+            <div className="text-2xl font-light">{newsletters.length}</div>
           </div>
         </div>
         <div className="bg-[#111] p-6 rounded border border-gray-800 hover:border-gray-700 transition-colors">
           <div className="space-y-2">
             <p className="text-sm text-gray-400 font-light">Last Updated</p>
-            <div className="text-2xl font-light">{formatDate(project.lastUpdated)}</div>
+            <div className="text-2xl font-light">{formatDate(project.updated_at)}</div>
           </div>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="bg-transparent border-b border-gray-800 rounded-none w-full justify-start h-auto p-0">
-          <TabsTrigger 
-            value="documents"
+          <TabsTrigger
+            value="recipients"
             className="rounded-none px-4 py-2 text-gray-400 data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-white font-light"
           >
-            Documents
+            Recipients
           </TabsTrigger>
-          <TabsTrigger 
+          <TabsTrigger
             value="newsletter"
             className="rounded-none px-4 py-2 text-gray-400 data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-white font-light"
           >
             Newsletter Settings
           </TabsTrigger>
-          <TabsTrigger 
-            value="scraping"
-            className="rounded-none px-4 py-2 text-gray-400 data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-white font-light"
-          >
-            Scraping Packages
-          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="documents" className="space-y-4">
+        <TabsContent value="recipients" className="space-y-4">
           <div className="flex justify-between items-center">
             <div className="space-y-1">
-              <h2 className="text-lg font-light">Documents</h2>
+              <h2 className="text-lg font-light">Recipients</h2>
               <p className="text-sm text-gray-400">
-                Manage project documents and files
+                Manage project recipients and assign personas
               </p>
             </div>
-            <Button 
-              onClick={() => setShowUploadModal(true)}
+            <Button
+              onClick={() => {
+                setSelectedRecipient(null);
+                setShowRecipientModal(true);
+              }}
               className="bg-white text-black hover:bg-gray-200 font-light"
             >
-              <Upload className="h-4 w-4 mr-2" />
-              Upload Document
+              <Plus className="h-4 w-4 mr-2" />
+              Add Recipient
             </Button>
           </div>
 
-          {documents.length === 0 ? (
-            <div className="text-center py-12 border border-dashed border-gray-800 rounded-md bg-[#111]">
-              <FileText className="h-12 w-12 mx-auto text-gray-500 mb-4" />
-              <h3 className="text-lg font-light mb-2">No Documents Yet</h3>
-              <p className="text-sm text-gray-400 mb-4">
-                Upload documents to get started with your project
-              </p>
-              <Button 
-                onClick={() => setShowUploadModal(true)}
-                className="bg-white text-black hover:bg-gray-200 font-light"
-              >
-                Upload Document
-              </Button>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {documents.map((doc) => (
-                <div key={doc.id} className="bg-[#111] p-4 rounded border border-gray-800 hover:border-gray-700 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-light text-white">{doc.name}</h3>
-                      <p className="text-sm text-gray-400">
-                        {doc.size} • Uploaded {formatDate(doc.uploadedAt)}
-                      </p>
+          <div className="relative max-w-sm mb-4">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search recipients..."
+              className="pl-8 bg-[#111] border-gray-800 text-white"
+              value={recipientSearch}
+              onChange={(e) => setRecipientSearch(e.target.value)}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredRecipients.length === 0 ? (
+              <div className="text-center py-12 col-span-full bg-[#111] rounded-lg border border-gray-800">
+                <Mail className="h-12 w-12 mx-auto text-gray-500 mb-4" />
+                <h3 className="text-lg font-light mb-2">No Recipients Yet</h3>
+                <p className="text-sm text-gray-400 mb-4">
+                  Add recipients to manage your audience
+                </p>
+                <Button
+                  onClick={() => {
+                    setSelectedRecipient(null);
+                    setShowRecipientModal(true);
+                  }}
+                  className="bg-white text-black hover:bg-gray-200 font-light"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Recipient
+                </Button>
+              </div>
+            ) : (
+              filteredRecipients.map((recipient) => (
+                <div key={recipient.id} className="bg-[#111] p-4 rounded border border-gray-800 hover:border-gray-700 transition-colors">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-light text-white">{recipient.name}</h3>
+                    <div className="flex gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          setSelectedRecipient(recipient);
+                          setShowRecipientModal(true);
+                        }}
+                        className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-800"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleDeleteRecipient(recipient.id)}
+                        className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-gray-800"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
-                    >
-                      Download
-                    </Button>
+                  </div>
+                  <p className="text-sm text-gray-400">{recipient.email}</p>
+                  {recipient.company && (
+                    <p className="text-xs text-gray-500 mb-2">{recipient.company}</p>
+                  )}
+
+                  {/* Persona preview */}
+                  {recipient.persona_id && (
+                    <div className="mt-2 mb-3 p-2 bg-[#1a1a1a] rounded border border-gray-800">
+                      <div className="flex items-center gap-2">
+                        <UserCircle className="h-4 w-4 text-gray-400" />
+                        <span className="text-xs text-gray-300">
+                          {personas.find(p => p.id === recipient.persona_id)?.name || "Unknown Persona"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* For backward compatibility - check persona field too */}
+                  {!recipient.persona_id && recipient.persona && (
+                    <div className="mt-2 mb-3 p-2 bg-[#1a1a1a] rounded border border-gray-800">
+                      <div className="flex items-center gap-2">
+                        <UserCircle className="h-4 w-4 text-gray-400" />
+                        <span className="text-xs text-gray-300">
+                          {personas.find(p => p.id === recipient.persona)?.name || "Unknown Persona"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center text-sm">
+                      <MailCheck className="h-4 w-4 mr-2 text-gray-500" />
+                      <span className="text-gray-400">Newsletters: {recipient.newsletterCount || 0}</span>
+                    </div>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-light ${
+                      recipient.status === "active" ? "bg-green-900/30 text-green-400" : "bg-gray-800 text-gray-400"
+                    }`}>
+                      {recipient.status}
+                    </span>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+              ))
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="newsletter" className="space-y-6">
@@ -319,38 +387,92 @@ export default function ProjectPage() {
           </div>
 
           <div className="bg-[#111] rounded-lg border border-gray-800 p-6 space-y-8">
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium">Frequency & Schedule</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-400 font-light">Delivery Frequency</label>
-                  <div className="flex gap-2">
-                    <Button variant="default" size="sm" className="bg-white text-black hover:bg-gray-200 font-light">Weekly</Button>
-                    <Button variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light">Bi-weekly</Button>
-                    <Button variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light">Monthly</Button>
-                    <Button variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light">Custom</Button>
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-medium">Newsletter Schedule</h3>
+              <Button
+                onClick={() => setShowScheduleModal(true)}
+                className="bg-white text-black hover:bg-gray-200 font-light"
+              >
+                {schedule ? 'Edit Schedule' : 'Set Schedule'}
+              </Button>
+            </div>
+            
+            {schedule ? (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-gray-400 text-sm">Frequency</p>
+                  <p className="text-white capitalize">{schedule.frequency}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-sm">Time</p>
+                  <p className="text-white">{schedule.time}</p>
+                </div>
+                {schedule.frequency === 'weekly' && (
+                  <div className="col-span-2">
+                    <p className="text-gray-400 text-sm">Days</p>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {schedule.days.map(day => (
+                        <span 
+                          key={day} 
+                          className="inline-block px-2 py-1 bg-gray-800 text-white rounded text-xs capitalize"
+                        >
+                          {day}
+                        </span>
+                      ))}
+                    </div>
                   </div>
+                )}
+                {schedule.frequency === 'monthly' && (
+                  <div className="col-span-2">
+                    <p className="text-gray-400 text-sm">Days of Month</p>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {schedule.days.map(day => (
+                        <span 
+                          key={day} 
+                          className="inline-block px-2 py-1 bg-gray-800 text-white rounded text-xs"
+                        >
+                          {day}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="col-span-2">
+                  <p className="text-gray-400 text-sm">Status</p>
+                  <p className="text-white">{schedule.active ? 'Active' : 'Inactive'}</p>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-400 font-light">Send Time</label>
-                  <Button variant="outline" className="w-full justify-between border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light">
-                    9:00 AM
-                    <span className="text-gray-500">▼</span>
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-400 font-light">Day of Week</label>
-                  <Button variant="outline" className="w-full justify-between border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light">
-                    Monday
-                    <span className="text-gray-500">▼</span>
-                  </Button>
-                </div>
+                {schedule.next_scheduled_date && (
+                  <div className="col-span-2">
+                    <p className="text-gray-400 text-sm">Next Newsletter</p>
+                    <p className="text-white">{formatDate(schedule.next_scheduled_date)}</p>
+                  </div>
+                )}
               </div>
-            </div>
-
-            <div className="flex justify-end">
-              <Button className="bg-white text-black hover:bg-gray-200 font-light">Save Settings</Button>
-            </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <Calendar className="h-12 w-12 mx-auto text-gray-500 mb-4" />
+                <p className="mb-4">No schedule configured</p>
+                <Button 
+                  onClick={() => setShowScheduleModal(true)}
+                  className="bg-white text-black hover:bg-gray-200 font-light"
+                >
+                  Set Schedule
+                </Button>
+              </div>
+            )}
+          </div>
+          
+          {/* Scheduled Newsletters Section */}
+          <div className="mt-6">
+            <ScheduledNewsletters 
+              newsletters={scheduledNewsletters}
+              onView={handleViewNewsletter}
+              onCancel={handleCancelNewsletter}
+              onReschedule={(newsletter) => {
+                setSelectedNewsletter(newsletter);
+                setShowRescheduleModal(true);
+              }}
+            />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -368,28 +490,31 @@ export default function ProjectPage() {
                 </div>
               </div>
 
-              <div className="bg-[#111] rounded-lg border border-gray-800 divide-y divide-gray-800">
+              <div className="space-y-4">
                 {filteredNewsletters.length === 0 ? (
-                  <div className="p-4 text-center text-gray-400">
+                  <div className="p-4 text-center text-gray-400 bg-[#111] rounded-lg border border-gray-800">
                     No newsletters found
                   </div>
                 ) : (
                   filteredNewsletters.map((newsletter) => (
-                    <div key={newsletter.id} className="p-4 space-y-2">
-                      <div className="flex justify-between">
-                        <h4 className="font-light text-white">{newsletter.subject}</h4>
-                        <span className="text-sm text-gray-400">
-                          {formatDate(newsletter.sentAt || newsletter.scheduledFor)}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-400">
-                        Sent to {newsletter.recipients} recipients
-                      </p>
-                      <div className="flex gap-4 text-sm">
-                        <span className="text-gray-300">Open Rate: {newsletter.stats?.openRate || 0}%</span>
-                        <span className="text-gray-300">Click Rate: {newsletter.stats?.clickRate || 0}%</span>
-                      </div>
-                    </div>
+                    <NewsletterCard
+                      key={newsletter.id}
+                      newsletter={newsletter}
+                      onView={handleViewNewsletter}
+                      onDelete={(newsletter) => {
+                        if (confirm(`Are you sure you want to delete the newsletter "${newsletter.subject || newsletter.title}"?`)) {
+                          apiClient.newslettersArchive.delete(newsletter.id)
+                            .then(() => {
+                              setNewsletters(newsletters.filter(n => n.id !== newsletter.id));
+                              alert("Newsletter deleted successfully");
+                            })
+                            .catch(error => {
+                              console.error("Error deleting newsletter:", error);
+                              alert("Failed to delete newsletter: " + error.message);
+                            });
+                        }
+                      }}
+                    />
                   ))
                 )}
               </div>
@@ -410,8 +535,8 @@ export default function ProjectPage() {
                   <p className="text-sm text-gray-400 font-light">Total Subscribers</p>
                   <p className="text-2xl font-light">{project.recipients}</p>
                 </div>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
                 >
                   Download Report
@@ -419,107 +544,6 @@ export default function ProjectPage() {
               </div>
             </div>
           </div>
-        </TabsContent>
-
-        <TabsContent value="scraping" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <div className="space-y-1">
-              <h2 className="text-lg font-light">Scraping Packages</h2>
-              <p className="text-sm text-gray-400">
-                Manage and configure content scraping packages
-              </p>
-            </div>
-            <Button 
-              onClick={() => {
-                setSelectedPackage(null);
-                setShowPackageModal(true);
-              }}
-              className="bg-white text-black hover:bg-gray-200 font-light"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Package
-            </Button>
-          </div>
-
-          {packages.length === 0 ? (
-            <div className="text-center py-12 border border-dashed border-gray-800 rounded-md bg-[#111]">
-              <h3 className="text-lg font-light mb-2">No Scraping Packages Yet</h3>
-              <p className="text-sm text-gray-400 mb-4">
-                Create a scraping package to automate content collection
-              </p>
-              <Button 
-                onClick={() => {
-                  setSelectedPackage(null);
-                  setShowPackageModal(true);
-                }}
-                className="bg-white text-black hover:bg-gray-200 font-light"
-              >
-                Add Package
-              </Button>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {packages.map((pkg) => (
-                <div key={pkg.id} className="bg-[#111] p-4 rounded border border-gray-800 hover:border-gray-700 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-light text-white">{pkg.name}</h3>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-light ${
-                          pkg.status === "active" ? "bg-green-900/30 text-green-400" : "bg-gray-800 text-gray-400"
-                        }`}>
-                          {pkg.status}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-400 mt-1">
-                        {pkg.description}
-                      </p>
-                      <div className="flex gap-4 text-sm mt-3">
-                        <span className="text-gray-400">
-                          Last run: {pkg.lastRun ? formatDate(pkg.lastRun) : "Never"}
-                        </span>
-                        <span className="text-gray-400">
-                          Next run: {formatDate(pkg.nextRun)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleViewHistory(pkg)}
-                        className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
-                      >
-                        <History className="h-4 w-4 mr-2" />
-                        History
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleConfigurePackage(pkg)}
-                        className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
-                      >
-                        <Settings className="h-4 w-4 mr-2" />
-                        Configure
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => {
-                          setSelectedPackage(pkg);
-                          setShowPackageModal(true);
-                        }}
-                        className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </TabsContent>
       </Tabs>
 
@@ -536,129 +560,95 @@ export default function ProjectPage() {
       </Modal>
 
       <Modal
-        isOpen={showUploadModal}
-        onClose={() => setShowUploadModal(false)}
-        title="Upload Document"
+        isOpen={showRecipientModal}
+        onClose={() => {
+          setShowRecipientModal(false);
+          setSelectedRecipient(null);
+        }}
+        title={selectedRecipient ? `Edit Recipient` : `Add Recipient`}
       >
-        <div className="space-y-6">
-          <div 
-            className={`border-2 border-dashed rounded-lg p-10 text-center ${
-              dragActive ? "border-gray-600 bg-gray-900/10" : "border-gray-800"
-            } bg-[#111]`}
-            onDragEnter={handleDrag}
-            onDragOver={handleDrag}
-            onDragLeave={handleDrag}
-            onDrop={handleDrop}
-          >
-            <p className="text-gray-400 mb-2 font-light">Drag and drop your file here, or</p>
-            <input
-              type="file"
-              id="file-input"
-              className="hidden"
-              multiple
-              onChange={handleFileChange}
+        <RecipientForm
+          recipient={selectedRecipient}
+          personas={personas}
+          onSubmit={selectedRecipient ? handleUpdateRecipient : handleCreateRecipient}
+          onCancel={() => {
+            setShowRecipientModal(false);
+            setSelectedRecipient(null);
+          }}
+        />
+      </Modal>
+      
+      {/* Newsletter Schedule Modal */}
+      <Modal
+        isOpen={showScheduleModal}
+        onClose={() => setShowScheduleModal(false)}
+        title={schedule ? "Edit Newsletter Schedule" : "Set Newsletter Schedule"}
+      >
+        <NewsletterScheduleForm 
+          projectId={id}
+          initialData={schedule}
+          onSubmit={handleUpdateSchedule}
+        />
+      </Modal>
+      
+      {/* Reschedule Newsletter Modal */}
+      <Modal
+        isOpen={showRescheduleModal && selectedNewsletter !== null}
+        onClose={() => {
+          setShowRescheduleModal(false);
+          setSelectedNewsletter(null);
+        }}
+        title="Reschedule Newsletter"
+      >
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.target);
+          const newDate = formData.get('scheduled_date') + 'T' + formData.get('scheduled_time');
+          handleRescheduleNewsletter(selectedNewsletter, newDate);
+        }} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="scheduled_date" className="text-white">Date</Label>
+            <Input
+              type="date"
+              id="scheduled_date"
+              name="scheduled_date"
+              defaultValue={selectedNewsletter?.scheduled_for?.split('T')[0] || new Date().toISOString().split('T')[0]}
+              className="bg-[#111] border-gray-800 text-white"
+              required
             />
-            <label htmlFor="file-input">
-              <Button 
-                as="span"
-                className="bg-white text-black hover:bg-gray-200 font-light cursor-pointer"
-              >
-                Browse Files
-              </Button>
-            </label>
-            <p className="text-xs text-gray-500 mt-4">Supported file types: PDF, DOCX, XLSX, CSV, TXT (Max 10MB)</p>
           </div>
-
-          {uploadedFiles.length > 0 && (
-            <div className="border border-gray-800 rounded-md divide-y divide-gray-800 bg-[#111]">
-              {uploadedFiles.map((file) => (
-                <div key={file.id} className="flex items-center justify-between p-3">
-                  <div className="flex items-center">
-                    <FileText className="h-5 w-5 mr-3 text-gray-400" />
-                    <div>
-                      <p className="font-light text-white">{file.name}</p>
-                      <p className="text-xs text-gray-400">{file.size}</p>
-                    </div>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => removeFile(file.id)}
-                    className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-gray-800"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-          
-          <div className="flex justify-end space-x-2">
-            <Button
-              variant="outline"
+          <div className="space-y-2">
+            <Label htmlFor="scheduled_time" className="text-white">Time</Label>
+            <Input
+              type="time"
+              id="scheduled_time"
+              name="scheduled_time"
+              defaultValue={selectedNewsletter?.scheduled_for?.split('T')[1]?.substring(0, 5) || '09:00'}
+              className="bg-[#111] border-gray-800 text-white"
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button 
+              type="button" 
+              variant="outline" 
               onClick={() => {
-                setUploadedFiles([]);
-                setShowUploadModal(false);
+                setShowRescheduleModal(false);
+                setSelectedNewsletter(null);
               }}
-              className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
+              className="bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white font-light"
             >
               Cancel
             </Button>
             <Button 
-              disabled={uploadedFiles.length === 0}
-              onClick={handleUploadDocument}
-              className="bg-white text-black hover:bg-gray-200 font-light disabled:bg-gray-800 disabled:text-gray-500"
+              type="submit"
+              className="bg-white text-black hover:bg-gray-200 font-light"
             >
-              Upload
+              Reschedule
             </Button>
           </div>
-        </div>
-      </Modal>
-
-      <Modal
-        isOpen={showPackageModal}
-        onClose={() => {
-          setShowPackageModal(false);
-          setSelectedPackage(null);
-        }}
-        title={selectedPackage ? "Edit Scraping Package" : "Create Scraping Package"}
-      >
-        <ScrapingPackageConfigForm
-          scrapingPackage={selectedPackage}
-          personas={personas}
-          onSubmit={selectedPackage ? handleEditPackage : handleCreatePackage}
-          onCancel={() => {
-            setShowPackageModal(false);
-            setSelectedPackage(null);
-          }}
-        />
-      </Modal>
-
-      <Modal
-        isOpen={showConfigureModal}
-        onClose={() => {
-          setShowConfigureModal(false);
-          setSelectedPackage(null);
-        }}
-        title={`Configure ${selectedPackage?.name || 'Scraping Package'}`}
-      >
-        <ScrapingPackageConfigForm
-          scrapingPackage={selectedPackage}
-          personas={personas}
-          onSubmit={(formData) => {
-            const updatedPackages = packages.map((pkg) =>
-              pkg.id === selectedPackage.id ? { ...pkg, ...formData } : pkg
-            );
-            setPackages(updatedPackages);
-            setSelectedPackage(null);
-            setShowConfigureModal(false);
-          }}
-          onCancel={() => {
-            setShowConfigureModal(false);
-            setSelectedPackage(null);
-          }}
-        />
+        </form>
       </Modal>
     </div>
   );
-} 
+}
