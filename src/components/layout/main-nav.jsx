@@ -11,7 +11,7 @@ export function MainNav() {
   return (
     <nav>
       <ul className="flex space-x-8">
-        <li className="relative">
+        <li>
           <Link
             href="/"
             className={cn(
@@ -20,15 +20,9 @@ export function MainNav() {
             )}
           >
             Overview
-            <Badge
-              variant="outline"
-              className="ml-1.5 py-0 px-1.5 h-4 text-[10px] font-medium bg-amber-900/20 text-amber-500 border-amber-800/30 absolute -top-2 -right-8"
-            >
-              WIP
-            </Badge>
           </Link>
         </li>
-        <li className="relative">
+        <li>
           <Link
             href="/projects"
             className={cn(
@@ -37,12 +31,6 @@ export function MainNav() {
             )}
           >
             Projects
-            <Badge
-              variant="outline"
-              className="ml-1.5 py-0 px-1.5 h-4 text-[10px] font-medium bg-amber-900/20 text-amber-500 border-amber-800/30 absolute -top-2 -right-8"
-            >
-              WIP
-            </Badge>
           </Link>
         </li>
         <li>
