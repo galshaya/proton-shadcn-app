@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
+import { Sparkles } from "lucide-react"
 
 export function MainNav() {
   const pathname = usePathname()
@@ -64,6 +65,19 @@ export function MainNav() {
             )}
           >
             Proton Chat
+          </Link>
+        </li>
+        <li>
+          <Link
+            href="/visual-creator"
+            className={cn(
+              "text-sm font-medium transition-colors hover:text-white flex items-center gap-1",
+              pathname.startsWith("/visual-creator") ? "text-white" : "text-gray-400"
+            )}
+          >
+            <Sparkles className="h-4 w-4" />
+            <span>Visual Creator</span>
+            <Badge variant="outline" className="ml-1 text-xs bg-yellow-600/20 text-yellow-400 border-yellow-600/20">WIP</Badge>
           </Link>
         </li>
       </ul>
