@@ -12,23 +12,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Image as ImageIcon, Download, Sparkles } from "lucide-react";
+import { RefreshCw, Image as ImageIcon, Download, Sparkles, Wand2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-
-// Image size options
-const IMAGE_SIZES = [
-  { value: "square_hd", label: "Square HD" },
-  { value: "square", label: "Square" },
-  { value: "portrait_4_3", label: "Portrait 4:3" },
-  { value: "portrait_16_9", label: "Portrait 16:9" },
-  { value: "landscape_4_3", label: "Landscape 4:3" },
-  { value: "landscape_16_9", label: "Landscape 16:9" },
-];
-
-// Default prompt
-const DEFAULT_PROMPT = "A beautiful landscape with mountains and a lake, digital art style";
+import { MetaPrompt, getProcessedPrompt } from "@/components/visual-creator/meta-prompt";
+import { IMAGE_SIZES, DEFAULT_PROMPT, PROTO_STYLE_TEMPLATE } from "@/components/visual-creator/constants";
 
 export default function VisualCreator() {
+  // State for prompt fields
+  const [promptFields, setPromptFields] = useState({
+    insert_shape_or_subject: "",
+    insert_thematic_elements_or_concepts: ""
+  });
+
   // State for form inputs
   const [formData, setFormData] = useState({
     prompt: DEFAULT_PROMPT,
@@ -40,6 +35,9 @@ export default function VisualCreator() {
     enable_safety_checker: true,
     output_format: "jpeg",
   });
+
+  // State for prompt mode (free text or template)
+  const [useTemplate, setUseTemplate] = useState(true);
 
   // State for generation
   const [isGenerating, setIsGenerating] = useState(false);
@@ -77,6 +75,29 @@ export default function VisualCreator() {
     }));
   };
 
+  // Effect to update the prompt when template fields change
+  useEffect(() => {
+    if (useTemplate) {
+      const processedPrompt = getProcessedPrompt(PROTO_STYLE_TEMPLATE, promptFields);
+      setFormData(prev => ({ ...prev, prompt: processedPrompt }));
+    }
+  }, [promptFields, useTemplate]);
+
+  // Handle prompt field changes
+  const handlePromptFieldChange = (newFields) => {
+    setPromptFields(newFields);
+  };
+
+  // Handle toggle between template and free text
+  const handleToggleTemplate = () => {
+    setUseTemplate(prev => !prev);
+    if (!useTemplate) {
+      // Switching to template mode
+      const processedPrompt = getProcessedPrompt(PROTO_STYLE_TEMPLATE, promptFields);
+      setFormData(prev => ({ ...prev, prompt: processedPrompt }));
+    }
+  };
+
   // Handle image generation
   const handleGenerate = async () => {
     const envApiKey = process.env.NEXT_PUBLIC_FAL_KEY;
@@ -88,6 +109,22 @@ export default function VisualCreator() {
         variant: "destructive",
       });
       return;
+    }
+
+    // Validate template fields if using template
+    if (useTemplate) {
+      const missingFields = [];
+      if (!promptFields.insert_shape_or_subject) missingFields.push("Shape or Subject");
+      if (!promptFields.insert_thematic_elements_or_concepts) missingFields.push("Thematic Elements or Concepts");
+
+      if (missingFields.length > 0) {
+        toast({
+          title: "Missing Fields",
+          description: `Please fill in all required fields: ${missingFields.join(", ")}`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     try {
@@ -218,19 +255,55 @@ export default function VisualCreator() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Prompt */}
-              <div className="space-y-2">
-                <Label htmlFor="prompt">Prompt</Label>
-                <Textarea
-                  id="prompt"
-                  name="prompt"
-                  value={formData.prompt}
-                  onChange={handleChange}
-                  placeholder="Describe the image you want to generate"
-                  rows={4}
-                  className="bg-[#111] border-gray-800 text-white focus:ring-0 focus:border-gray-700"
-                />
+              {/* Prompt Mode Toggle */}
+              <div className="flex items-center justify-between mb-4">
+                <Label htmlFor="prompt-mode" className="text-gray-300 font-light">Prompt Mode</Label>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant={useTemplate ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setUseTemplate(true)}
+                    className={useTemplate ? "bg-white text-black hover:bg-gray-200" : "border-gray-700 text-gray-300 hover:bg-gray-800"}
+                  >
+                    <Wand2 className="h-4 w-4 mr-2" />
+                    Template
+                  </Button>
+                  <Button
+                    variant={!useTemplate ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setUseTemplate(false)}
+                    className={!useTemplate ? "bg-white text-black hover:bg-gray-200" : "border-gray-700 text-gray-300 hover:bg-gray-800"}
+                  >
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    Free Text
+                  </Button>
+                </div>
               </div>
+
+              {/* Prompt Input */}
+              {useTemplate ? (
+                <div className="space-y-2">
+                  <Label htmlFor="template-prompt" className="text-gray-300 font-light">Proto Style Template</Label>
+                  <MetaPrompt
+                    template={PROTO_STYLE_TEMPLATE}
+                    fieldValues={promptFields}
+                    onChange={handlePromptFieldChange}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="prompt">Custom Prompt</Label>
+                  <Textarea
+                    id="prompt"
+                    name="prompt"
+                    value={formData.prompt}
+                    onChange={handleChange}
+                    placeholder="Describe the image you want to generate"
+                    rows={4}
+                    className="bg-[#111] border-gray-800 text-white focus:ring-0 focus:border-gray-700"
+                  />
+                </div>
+              )}
 
               {/* Image Size */}
               <div className="space-y-2">
